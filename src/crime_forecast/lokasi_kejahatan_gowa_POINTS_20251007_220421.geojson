@@ -1,0 +1,257 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "lokasi": "bajeng",
+        "jumlah": 188
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.4375,
+          -5.293333333333333
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "lokasi": "bajeng barat",
+        "jumlah": 18
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.40944726245384,
+          -5.300314150593471
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "lokasi": "barombong",
+        "jumlah": 99
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.3875433888889,
+          -5.209309694444444
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "lokasi": "biringbulu",
+        "jumlah": 37
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.74919546625523,
+          -5.4333376496926
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "lokasi": "bontolempangan",
+        "jumlah": 5
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.80253439962759,
+          -5.38405475461195
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "lokasi": "bontomarannu",
+        "jumlah": 106
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.50972222222222,
+          -5.232777777777778
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "lokasi": "bontonompo",
+        "jumlah": 104
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.4413888888889,
+          -5.345
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "lokasi": "bontonomposelatan",
+        "jumlah": 2
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.38797296348483,
+          -5.400714559963502
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "lokasi": "bungaya",
+        "jumlah": 11
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.73342378604032,
+          -5.362860095957291
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "lokasi": "manuju",
+        "jumlah": 6
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.62852971062064,
+          -5.282355141493898
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "lokasi": "pallangga",
+        "jumlah": 689
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.44500000000001,
+          -5.223888888888889
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "lokasi": "parangloe",
+        "jumlah": 40
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.65031744241941,
+          -5.249535139050935
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "lokasi": "parigi",
+        "jumlah": 8
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.83930957162228,
+          -5.287031702646656
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "lokasi": "pattallassang",
+        "jumlah": 172
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.55916666666667,
+          -5.214166666666667
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "lokasi": "sombaopu",
+        "jumlah": 1987
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.45416666666667,
+          -5.201388888888889
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "lokasi": "tinggimoncong",
+        "jumlah": 31
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.8617227982875,
+          -5.246048874047597
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "lokasi": "tombolopao",
+        "jumlah": 17
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.93788733489077,
+          -5.246284149950068
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "lokasi": "tompobulu",
+        "jumlah": 33
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.84294347639731,
+          -5.432051757064656
+        ]
+      }
+    }
+  ]
+}
