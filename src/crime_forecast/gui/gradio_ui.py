@@ -6,15 +6,6 @@ import gradio as gr
 from crime_forecast.pipeline import run_pipeline
 from crime_forecast.utils.plotting import make_info_fig
 from datetime import datetime, date
-import matplotlib.pyplot as plt
-import io
-import tempfile
-import os
-from pathlib import Path
-import importlib
-from crime_forecast.models.persistence import load_metadata, load_sarima, load_scaler
-from crime_forecast.predict import forecast_with_hybrid
-from crime_forecast.data.preprocess import ensure_monthly_sum
 
 from datetime import datetime, date
 
@@ -95,77 +86,93 @@ def _collect_df(file, table):
             return pd.read_excel(file.name)
     return pd.DataFrame(table)
 
-def run_all(
-    file, table,
-    date_c, value_c, do_out,
-    waktu_c, tkp_c, jenis_c, jumlah_c,
-    coords_f, geojson_f,
-    test_len, use_auto, p,d,q, P,D,Q, s,
-    grid_win, grid_hid, lr, batch_size, epochs, patience, horizon,
+def _prepare_pipeline_inputs(
+    file, table, date_c, value_c, do_out, waktu_c, tkp_c, jenis_c, jumlah_c,
+    coords_f, geojson_f, test_len, use_auto, p, d, q, P, D, Q, s,
+    grid_win, grid_hid, lr, batch_size, epochs, patience, horizon
 ):
+    """Mengumpulkan dan membersihkan semua input dari UI untuk pipeline."""
     df_raw = _collect_df(file, table)
+    if df_raw.empty:
+        raise ValueError("Data input kosong. Silakan unggah file atau isi tabel.")
 
-    # panggil pipeline — unpack dengan try/except untuk kompatibilitas
+    pipeline_args = {
+        "df_raw": df_raw,
+        "date_col_name": date_c, "value_col_name": value_c, "do_outlier_iqr": bool(do_out),
+        "waktu_col_name": waktu_c, "tkp_col_name": tkp_c, "jenis_col_name": jenis_c, "jumlah_col_name": jumlah_c,
+        "coords_file": coords_f, "geojson_file": geojson_f,
+        "test_len": int(test_len), "use_auto_arima": bool(use_auto),
+        "order_p": int(p), "order_d": int(d), "order_q": int(q),
+        "seas_P": int(P), "seas_D": int(D), "seas_Q": int(Q), "seas_s": int(s),
+        "grid_windows": grid_win, "grid_hiddens": grid_hid,
+        "lstm_lr": float(lr), "lstm_bs": int(batch_size), "lstm_epochs": int(epochs), "lstm_patience": int(patience),
+        "horizon": int(horizon),
+    }
+    return pipeline_args
+
+def _process_pipeline_outputs(results):
+    """Memproses hasil dari pipeline untuk ditampilkan di UI Gradio."""
+    # Unpack hasil dengan aman, menangani kemungkinan versi pipeline yang berbeda
     try:
         (
             fig_main, fig_eda, fig_acf, fig_season, fig_calendar,
             fig_top_tkp, fig_top_jenis, fig_perjenis, fig_total_bln,
             metrics, hist_df, comp_df, csv_bytes, kpis, adf_info, peak_months,
-            pivot_loc_kind, fig_loc_kind, map_html,
-        ) = run_pipeline(
-            df_raw,
-            date_c, value_c, bool(do_out),
-            waktu_c, tkp_c, jenis_c, jumlah_c,
-            coords_f, geojson_f,
-            int(test_len), bool(use_auto),
-            int(p), int(d), int(q), int(P), int(D), int(Q), int(s),
-            grid_win, grid_hid, float(lr), int(batch_size), int(epochs), int(patience),
-            int(horizon),
-        )
-    except ValueError:
-        # fallback jika run_pipeline versi lama tidak mengembalikan pivot/fig
-        (
-            fig_main, fig_eda, fig_acf, fig_season, fig_calendar,
-            fig_top_tkp, fig_top_jenis, fig_perjenis, fig_total_bln,
-            metrics, hist_df, comp_df, csv_bytes, peak_months, map_html
-        ) = run_pipeline(
-            df_raw,
-            date_c, value_c, bool(do_out),
-            waktu_c, tkp_c, jenis_c, jumlah_c,
-            coords_f, geojson_f,
-            int(test_len), bool(use_auto),
-            int(p), int(d), int(q), int(P), int(D), int(Q), int(s),
-            grid_win, grid_hid, float(lr), int(batch_size), int(epochs), int(patience),
-            int(horizon),
-        )
-        kpis = {}
-        adf_info = {}
-        pivot_loc_kind = pd.DataFrame()
-        fig_loc_kind = make_info_fig("Data TKP/jenis tidak tersedia.")
+            _, _, map_html,  # pivot_loc_kind dan fig_loc_kind tidak digunakan di UI
+        ) = results
+    except (ValueError, TypeError):
+        # Fallback untuk versi pipeline yang lebih lama
+        (fig_main, fig_eda, fig_acf, fig_season, fig_calendar,
+         fig_top_tkp, fig_top_jenis, fig_perjenis, fig_total_bln,
+         metrics, hist_df, comp_df, csv_bytes, peak_months, map_html) = results
+        kpis, adf_info = {}, {}
 
-    # siapkan file unduhan dari csv_bytes
+    # Siapkan file unduhan dari byte CSV
     tsname = int(time.time())
     fname = f"prediksi_hybrid_{tsname}.csv"
     with open(fname, "wb") as f:
         f.write(csv_bytes)
 
-    rmse_v = (kpis or {}).get("rmse")
-    mae_v  = (kpis or {}).get("mae")
-    mape_v = (kpis or {}).get("mape")
-    r2_v   = (kpis or {}).get("r2")
-    adf_s = (adf_info or {}).get("adf_stat")
-    adf_p = (adf_info or {}).get("pvalue")
+    # Ekstrak KPI dan statistik diagnostik dengan aman
+    kpis = kpis or {}
+    adf_info = adf_info or {}
+    rmse_v, mae_v, mape_v, r2_v = kpis.get("rmse"), kpis.get("mae"), kpis.get("mape"), kpis.get("r2")
+    adf_s, adf_p = adf_info.get("adf_stat"), adf_info.get("pvalue")
 
     return (
-        # Hasil & Unduhan
         fig_main, fig_eda, fig_acf, fig_season, fig_calendar,
         metrics, hist_df, comp_df, fname,
         rmse_v, mae_v, mape_v, r2_v, adf_s, adf_p, peak_months,
-        # Analisis Kejadian
         fig_top_tkp, fig_top_jenis, fig_perjenis, fig_total_bln,
-        # Peta: plot & tabel & html
-        fig_loc_kind, table_loc_type, map_html,
+        map_html,
     )
+
+def run_analysis_pipeline(
+    file, table, date_c, value_c, do_out, waktu_c, tkp_c, jenis_c, jumlah_c,
+    coords_f, geojson_f, test_len, use_auto, p, d, q, P, D, Q, s,
+    grid_win, grid_hid, lr, batch_size, epochs, patience, horizon,
+):
+    """Fungsi utama yang dipanggil oleh Gradio untuk menjalankan seluruh alur kerja."""
+    try:
+        # 1. Kumpulkan dan siapkan semua input
+        pipeline_args = _prepare_pipeline_inputs(
+            file, table, date_c, value_c, do_out, waktu_c, tkp_c, jenis_c, jumlah_c,
+            coords_f, geojson_f, test_len, use_auto, p, d, q, P, D, Q, s,
+            grid_win, grid_hid, lr, batch_size, epochs, patience, horizon
+        )
+
+        # 2. Jalankan pipeline utama
+        results = run_pipeline(**pipeline_args)
+
+        # 3. Proses output untuk ditampilkan di UI
+        return _process_pipeline_outputs(results)
+
+    except Exception as e:
+        # Menangani kesalahan dengan menampilkan pesan di beberapa output plot
+        error_fig = make_info_fig(f"Terjadi Kesalahan:\n{e}", figsize=(10, 4))
+        # Mengembalikan tuple dengan ukuran yang benar untuk semua output
+        num_outputs = 22 # Sesuaikan jumlah ini jika output berubah
+        return tuple([error_fig if i < 5 else None for i in range(num_outputs)])
 
 with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
     gr.Markdown(
@@ -263,19 +270,6 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
         with gr.TabItem("🗺️ Peta Lokasi"):
             # map html (existing)
             map_html_comp = gr.HTML(value="<div style='padding:12px'>Peta akan tampil di sini setelah dijalankan.</div>")
-            # tambahan: plot stacked per-lokasi per-jenis dan tabel pivot
-            plot_loc_type = gr.Plot(label="Jumlah Kejahatan per Jenis di Lokasi (Top lokasi)")
-            table_loc_type = gr.Dataframe(label="Tabel: Jumlah per Lokasi × Jenis", interactive=False)
-
-        with gr.TabItem("🔮 Prediksi Bulanan"):
-            # allow user to point to saved hybrid model folder (default models/hybrid)
-            models_dir = gr.Text(value="models/hybrid", label="Folder model (metadata.json di dalam folder)")
-            start_month = make_month_picker("Bulan/Tahun Awal (pilih hari pada bulan yang diinginkan)")
-            end_month = make_month_picker("Bulan/Tahun Akhir (pilih hari pada bulan yang diinginkan)")
-            predict_btn = gr.Button("Jalankan Prediksi untuk Rentang Bulan")
-
-            plot_forecast = gr.Plot(label="Grafik Prediksi (rentang terpilih)")
-            download_forecast = gr.File(label="Unduh CSV Prediksi (rentang terpilih)")
 
         # Diagnostik outputs
         adf_stat = gr.Number(label="ADF Statistic", interactive=False)
@@ -283,7 +277,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
         peak_tbl = gr.Dataframe(label="3 Bulan Puncak (Rata-rata Tertinggi)", interactive=False)
 
         run_btn.click(
-            fn=run_all,
+            fn=run_analysis_pipeline,
             inputs=[
                 file_in, df_in,
                 date_col, value_col, do_outlier,
@@ -299,161 +293,8 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
                 rmse_out, mae_out, mape_out, r2_out, adf_stat, adf_pval, peak_tbl,
                 # Tab 4
                 plot_top_tkp, plot_top_jenis, plot_perjenis, plot_total_bln,
-                # Tab 5 (Peta) -> sekarang menerima plot, tabel, dan HTML
-                plot_loc_type, table_loc_type, map_html_comp,
+                # Tab 5 (Peta)
+                map_html_comp,
             ],
             show_progress=True,
         )
-
-    # fungsi pembantu untuk hanya menjalankan prediksi dengan horizon tertentu
-    def run_forecast(
-        file, table,
-        date_c, value_c, do_out,
-        waktu_c, tkp_c, jenis_c, jumlah_c,
-        coords_f, geojson_f,
-        models_dir, start_month, end_month,
-        use_auto, p,d,q, P,D,Q, s,
-        grid_win, grid_hid, lr, batch_size, epochs, patience,
-    ):
-        df_raw = _collect_df(file, table)
-
-        # parse start/end into date objects (reuse helper in this module)
-        def parse_month_input(x):
-            if x is None:
-                return None
-            if isinstance(x, (date, datetime)):
-                return x if isinstance(x, date) else x.date()
-            s = str(x).strip()
-            for fmt in ("%Y-%m-%d", "%Y-%m", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f"):
-                try:
-                    return datetime.strptime(s, fmt).date()
-                except Exception:
-                    continue
-            try:
-                dt = pd.to_datetime(s, errors="coerce")
-                if pd.notna(dt):
-                    return dt.date()
-            except Exception:
-                pass
-            return None
-
-        start = parse_month_input(start_month)
-        end = parse_month_input(end_month)
-        if start is None or end is None:
-            return make_info_fig("Input tanggal tidak valid. Gunakan komponen tanggal atau format YYYY-MM / YYYY-MM-DD."), ""
-
-        months = (end.year - start.year) * 12 + (end.month - start.month) + 1
-        months = max(1, months)
-        horizon = int(months)
-
-        # load metadata from models_dir
-        meta_path = Path(models_dir) / "metadata.json"
-        sarima_path = lstm_path = scaler_path = None
-        if meta_path.exists():
-            try:
-                meta = load_metadata(str(meta_path))
-                sarima_path = meta.get("sarima")
-                lstm_path = meta.get("lstm")
-                scaler_path = meta.get("scaler")
-            except Exception:
-                sarima_path = lstm_path = scaler_path = None
-
-        # ensure monthly historical series for forecasting
-        try:
-            ts_df = ensure_monthly_sum(df_raw, date_c, value_c)  # returns Series-like DataFrame indexed by date with 'value'
-            hist_series = ts_df["value"] if isinstance(ts_df, pd.DataFrame) and "value" in ts_df.columns else pd.Series(ts_df)
-        except Exception:
-            hist_series = None
-
-        # attempt hybrid forecast if both sarima and lstm state exist and LSTM class can be imported
-        hybrid_result = None
-        if sarima_path and Path(sarima_path).exists():
-            # try to find LSTM class in a few common locations
-            lstm_class = None
-            if lstm_path and Path(lstm_path).exists():
-                candidates = [
-                    "crime_forecast.models.lstm.LSTMResidual",
-                    "crime_forecast.models.lstm.LSTMModel",
-                    "crime_forecast.models.lstm.LSTM",
-                    "crime_forecast.lstm.LSTMModel",
-                    "crime_forecast.models.arch.LSTM",
-                ]
-                for cand in candidates:
-                    try:
-                        modname, clsname = cand.rsplit(".", 1)
-                        mod = importlib.import_module(modname)
-                        lstm_class = getattr(mod, clsname)
-                        break
-                    except Exception:
-                        lstm_class = None
-                # if we found a class and have hist_series, call forecast_with_hybrid
-                if lstm_class is not None and hist_series is not None:
-                    try:
-                        hybrid_result = forecast_with_hybrid(
-                            sarima_path, lstm_class, lstm_path, scaler_path,
-                            hist_series, start, end, device="cpu", window=12
-                        )
-                    except Exception:
-                        hybrid_result = None
-
-        # if hybrid failed, fallback to SARIMA-only forecast
-        if hybrid_result is None:
-            try:
-                sarima = load_sarima(sarima_path) if sarima_path and Path(sarima_path).exists() else None
-                if sarima is None:
-                    return make_info_fig("Model SARIMA tidak ditemukan di folder yang diberikan."), ""
-                # produce sarima forecast for horizon
-                try:
-                    sarima_pred = sarima.get_forecast(steps=horizon)
-                    sarima_mean = pd.Series(sarima_pred.predicted_mean.values,
-                                            index=pd.date_range(pd.to_datetime(start), periods=horizon, freq="MS"))
-                except Exception:
-                    last = pd.to_datetime(start) - pd.offsets.MonthBegin(1)
-                    future_idx = pd.date_range(last + pd.offsets.MonthBegin(1), periods=horizon, freq="MS")
-                    sarima_mean = pd.Series([float(0)]*horizon, index=future_idx)
-                result = pd.DataFrame({"date": sarima_mean.index, "predicted": sarima_mean.values})
-                # limit to requested start..end
-                mask = (result["date"] >= pd.to_datetime(start)) & (result["date"] <= pd.to_datetime(end))
-                out_df = result.loc[mask].reset_index(drop=True)
-            except Exception:
-                return make_info_fig("Gagal melakukan prediksi menggunakan model yang tersimpan."), ""
-        else:
-            out_df = hybrid_result.copy()
-
-        if out_df is None or out_df.empty:
-            return make_info_fig("Tidak ada prediksi dalam rentang yang diberikan."), ""
-
-        # plot
-        fig, ax = plt.subplots(figsize=(8,4))
-        ax.plot(out_df["date"], out_df["predicted"], marker="o", linestyle="-")
-        ax.set_title(f"Prediksi Jumlah Kejadian ({start.strftime('%Y-%m')} → {end.strftime('%Y-%m')})")
-        ax.set_xlabel("Bulan")
-        ax.set_ylabel("Prediksi Jumlah Kejadian")
-        ax.grid(alpha=0.3)
-        plt.tight_layout()
-
-        # save csv for download — gunakan temp dir dan pastikan kita mengembalikan path file yang valid
-        fname = None
-        try:
-            fname = _safe_write_df_to_temp(out_df, filename_prefix=f"prediksi_rentang_{start.strftime('%Y%m')}_{end.strftime('%Y%m')}")
-        except Exception:
-            fname = None
-
-        # Pastikan mengembalikan None jika tidak ada file valid (Gradio tidak boleh menerima direktori)
-        return fig, fname
-
-    # connect predict button
-    predict_btn.click(
-        fn=run_forecast,
-        inputs=[
-            file_in, df_in,
-            date_col, value_col, do_outlier,
-            waktu_col, tkp_col, jenis_col, jumlah_col,
-            coords_file, geojson_file,
-            models_dir, start_month, end_month,
-            use_auto, p, d, q, P, D, Q, s,
-            grid_win, grid_hid, lr, batch_size, epochs, patience,
-        ],
-        outputs=[plot_forecast, download_forecast],
-        show_progress=True,
-    )
