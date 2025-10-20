@@ -201,6 +201,33 @@ def run_pipeline(
                    if test_len > 0 else np.array([]))
     y_true_test = test["value"].values if test_len > 0 else np.array([])
 
+    # 7b) Future forecast
+    future_pred_df = pd.DataFrame()
+    if horizon > 0:
+        # Retrain on all data
+        ts_all_t = np.log1p(ts_clean["value"])
+        sarima_all_fit_t = fit_sarima(ts_all_t, order=order, seasonal_order=seasonal_order)
+        residuals_all_t = (ts_all_t - sarima_all_fit_t.fittedvalues).fillna(0.0)
+        
+        # Predict residuals
+        pred_res_future_t = fit_lstm_and_predict(
+            residuals_all_t, horizon, window=best_window, hidden=best_hidden,
+            lr=lstm_lr, batch_size=lstm_bs, epochs=lstm_epochs, patience=lstm_patience)
+        
+        # Combine and create dataframe
+        sarima_future_t_vals = sarima_forecast(sarima_all_fit_t, steps=horizon).values
+        hybrid_future_t = np.expm1(sarima_future_t_vals + pred_res_future_t).clip(min=0)
+        
+        # Generate correct future dates starting from the month after the last data point
+        last_date = ts_clean.index.max()
+        future_dates = pd.date_range(start=last_date + pd.offsets.MonthBegin(1), periods=horizon, freq='MS')
+        
+        # Buat dataframe dengan format yang diinginkan untuk UI
+        future_pred_df = pd.DataFrame({
+            "Bulan": future_dates.strftime('%B %Y'),
+            "Prediksi Jumlah Kejahatan": [int(round(p)) for p in hybrid_future_t]
+        })
+
     # 8) Main plot (prediction)
     fig_main, ax = plt.subplots(figsize=(11.8, 4.6))
     ax.plot(train.index, train["value"], label="Train")
@@ -401,5 +428,5 @@ def run_pipeline(
         # tabel/unduh & kpi
         metrics_tbl, hist_df, comp_df, csv_bytes, kpis, adf_info, peak_months,
         # peta: pivot & figure + html
-        pivot_loc_kind, fig_loc_kind, map_html,
+        pivot_loc_kind, fig_loc_kind, map_html, future_pred_df,
     )

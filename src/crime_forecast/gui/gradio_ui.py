@@ -118,14 +118,11 @@ def _process_pipeline_outputs(results):
             fig_main, fig_eda, fig_acf, fig_season, fig_calendar,
             fig_top_tkp, fig_top_jenis, fig_perjenis, fig_total_bln,
             metrics, hist_df, comp_df, csv_bytes, kpis, adf_info, peak_months,
-            _, _, map_html,  # pivot_loc_kind dan fig_loc_kind tidak digunakan di UI
+            _, _, map_html, future_pred_df, # pivot_loc_kind dan fig_loc_kind tidak digunakan di UI
         ) = results
     except (ValueError, TypeError):
         # Fallback untuk versi pipeline yang lebih lama
-        (fig_main, fig_eda, fig_acf, fig_season, fig_calendar,
-         fig_top_tkp, fig_top_jenis, fig_perjenis, fig_total_bln,
-         metrics, hist_df, comp_df, csv_bytes, peak_months, map_html) = results
-        kpis, adf_info = {}, {}
+        return tuple([make_info_fig("Error: Pipeline output mismatch.") for _ in range(24)])
 
     # Siapkan file unduhan dari byte CSV
     tsname = int(time.time())
@@ -144,7 +141,7 @@ def _process_pipeline_outputs(results):
         metrics, hist_df, comp_df, fname,
         rmse_v, mae_v, mape_v, r2_v, adf_s, adf_p, peak_months,
         fig_top_tkp, fig_top_jenis, fig_perjenis, fig_total_bln,
-        map_html,
+        map_html, future_pred_df,
     )
 
 def run_analysis_pipeline(
@@ -170,9 +167,24 @@ def run_analysis_pipeline(
     except Exception as e:
         # Menangani kesalahan dengan menampilkan pesan di beberapa output plot
         error_fig = make_info_fig(f"Terjadi Kesalahan:\n{e}", figsize=(10, 4))
+        error_df = pd.DataFrame({"Error": [str(e)]})
         # Mengembalikan tuple dengan ukuran yang benar untuk semua output
-        num_outputs = 22 # Sesuaikan jumlah ini jika output berubah
-        return tuple([error_fig if i < 5 else None for i in range(num_outputs)])
+        num_outputs = 24 # Sesuaikan jumlah ini jika output berubah
+        
+        # Buat daftar None dengan ukuran yang benar
+        outputs = [None] * num_outputs
+        
+        # Assign error figure to plot outputs
+        plot_indices = [0, 1, 2, 3, 4, 17, 18, 19, 20] # Indeks plot
+        for i in plot_indices:
+            outputs[i] = error_fig
+        
+        # Assign error dataframe to table outputs
+        df_indices = [5, 6, 7, 16, 22] # Indeks 23 (future_df_state) sekarang menjadi 22
+        for i in df_indices:
+            outputs[i] = error_df
+
+        return tuple(outputs)
 
 with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
     gr.Markdown(
@@ -243,6 +255,11 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
                 patience = gr.Slider(3, 50, value=13, step=1, label="Patience")
 
             run_btn = gr.Button("▶️ Jalankan Training, Analisis, & Peta", variant="primary")
+            
+            # Diagnostik outputs
+            adf_stat = gr.Number(label="ADF Statistic", interactive=False)
+            adf_pval = gr.Number(label="ADF p-value", interactive=False)
+            peak_tbl = gr.Dataframe(label="3 Bulan Puncak (Rata-rata Tertinggi)", interactive=False)
 
         with gr.TabItem("📊 Hasil & Unduhan"):
             plot_main = gr.Plot(label="Grafik Prediksi: Train/Test, SARIMA vs Hybrid")
@@ -262,19 +279,21 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
             r2_out = gr.Number(label="R²", interactive=False)
 
         with gr.TabItem("📈 Analisis TKP & Jenis"):
-            plot_top_tkp = gr.Plot(label="Top 10 Lokasi (TKP) Terbanyak")
-            plot_top_jenis = gr.Plot(label="Top 10 Jenis Kejahatan Terbanyak")
-            plot_perjenis = gr.Plot(label="Jumlah Kejahatan per Bulan (per Jenis)")
-            plot_total_bln = gr.Plot(label="Jumlah Kejahatan per Bulan (Total)")
+            with gr.Row():
+                plot_top_tkp = gr.Plot(label="Top 10 Lokasi (TKP) Terbanyak")
+                plot_top_jenis = gr.Plot(label="Top 10 Jenis Kejahatan Terbanyak")
 
-        with gr.TabItem("🗺️ Peta Lokasi"):
-            # map html (existing)
-            map_html_comp = gr.HTML(value="<div style='padding:12px'>Peta akan tampil di sini setelah dijalankan.</div>")
+            with gr.Row():
+                plot_perjenis = gr.Plot(label="Jumlah Kejahatan per Bulan (per Jenis)")
+                plot_total_bln = gr.Plot(label="Jumlah Kejahatan per Bulan (Total)")
 
-        # Diagnostik outputs
-        adf_stat = gr.Number(label="ADF Statistic", interactive=False)
-        adf_pval = gr.Number(label="ADF p-value", interactive=False)
-        peak_tbl = gr.Dataframe(label="3 Bulan Puncak (Rata-rata Tertinggi)", interactive=False)
+        with gr.TabItem("🗺️ Peta Lokasi & Prediksi Masa Depan"):
+            gr.Markdown("Hasil prediksi masa depan akan ditampilkan di sini setelah analisis dijalankan. Anda dapat mengatur panjang prediksi menggunakan `Horizon Forecast` di tab 'Parameter & Training'.")
+
+            with gr.Row():
+                # map html (existing)
+                map_html_comp = gr.HTML(value="<div style='padding:12px'>Peta akan tampil di sini setelah dijalankan.</div>")
+                pred_range_output = gr.Dataframe(label="Hasil Prediksi Jumlah Kejahatan", interactive=False)
 
         run_btn.click(
             fn=run_analysis_pipeline,
@@ -294,7 +313,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
                 # Tab 4
                 plot_top_tkp, plot_top_jenis, plot_perjenis, plot_total_bln,
                 # Tab 5 (Peta)
-                map_html_comp,
+                map_html_comp, pred_range_output, # Hasil future_pred_df langsung ke tabel ini
             ],
             show_progress=True,
         )
