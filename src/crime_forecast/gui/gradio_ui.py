@@ -262,35 +262,28 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
             tkp_col   = gr.State(value="tkp" )
             jenis_col = gr.State(value="jenis_kejahatan" )
             jumlah_col= gr.State(value="jumlah_kejadian" )
-            coords_file = gr.State(value=r"src\crime_forecast\lokasi_kejahatan_gowa_with_coords_20251007_220421 (1).csv")
-            geojson_file = gr.State(value=r"src\crime_forecast\lokasi_kejahatan_gowa_POINTS_20251007_220421.geojson")
+            coords_file = gr.State(value=r"src/crime_forecast/lokasi_kejahatan_gowa_with_coords_20251007_220421 (1).csv")
+            geojson_file = gr.State(value=r"src/crime_forecast/lokasi_kejahatan_gowa_POINTS_20251007_220421.geojson")
 
-        with gr.TabItem("🧠 Parameter & Training"):
-            with gr.Row():
-                test_len = gr.Slider(0, 36, value=4, step=1, label="Panjang Test (bulan)")
-                horizon = gr.Slider(1, 36, value=12, step=1, label="Horizon Forecast (bulan)")
+        with gr.TabItem("Analisis"):
+            test_len = gr.State(value=4,)
+            horizon = gr.State(value=12)
 
-            gr.Markdown("**SARIMA**")
-            with gr.Row():
-                use_auto = gr.Checkbox(value=True, label="Gunakan auto_arima (pmdarima)")
-                p = gr.Slider(0, 5, value=1, step=1, label="p")
-                d = gr.Slider(0, 2, value=2, step=1, label="d")
-                q = gr.Slider(0, 5, value=2, step=1, label="q")
-            with gr.Row():
-                P = gr.Slider(0, 3, value=1, step=1, label="P")
-                D = gr.Slider(0, 2, value=0, step=1, label="D")
-                Q = gr.Slider(0, 4, value=3, step=1, label="Q")
-                s = gr.Slider(0, 24, value=12, step=1, label="s (musim)")
+            use_auto = gr.State(value=True)
+            p = gr.State(value=1,)
+            d = gr.State(value=2,)
+            q = gr.State(value=2,)
+            P = gr.State(value=1,)
+            D = gr.State(value=0,)
+            Q = gr.State(value=3,)
+            s = gr.State(value=12)
 
-            gr.Markdown("**LSTM Residual (Grid Kecil)**")
-            with gr.Row():
-                grid_win = gr.Textbox(value="3,5,6", label="Coba Window (comma-separated)")
-                grid_hid = gr.Textbox(value="16,32,124", label="Coba Hidden Units (comma-separated)")
-            with gr.Row():
-                lr = gr.Number(value=0.001, label="Learning Rate")
-                batch_size = gr.Slider(8, 128, value=32, step=1, label="Batch Size")
-                epochs = gr.Slider(50, 1000, value=200, step=10, label="Epochs")
-                patience = gr.Slider(3, 50, value=13, step=1, label="Patience")
+            grid_win = gr.State(value="3")
+            grid_hid = gr.State(value="124")
+            lr = gr.State(value=0.001)
+            batch_size = gr.State(value=32,)
+            epochs = gr.State(value=200,)
+            patience = gr.State(value=13,)
 
             run_btn = gr.Button("▶️ Jalankan Training, Analisis, & Peta", variant="primary")
             
