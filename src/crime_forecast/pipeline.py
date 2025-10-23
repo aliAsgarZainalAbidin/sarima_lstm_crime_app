@@ -402,6 +402,10 @@ def run_pipeline(
         },
     }).T
 
+    metrics_tbl_for_ui = metrics_tbl.copy()
+    metrics_tbl_for_ui.index.name = "Model"
+    metrics_tbl_for_ui = metrics_tbl_for_ui.reset_index()
+
     kpis = {
         "rmse": None if test_len==0 else float(metrics_tbl.loc["Hybrid_SARIMA_LSTM","RMSE"]),
         "mae":  None if test_len==0 else float(metrics_tbl.loc["Hybrid_SARIMA_LSTM","MAE"]),
@@ -428,7 +432,7 @@ def run_pipeline(
         # Analisis kejadian
         fig_top_tkp, fig_top_jenis, fig_perjenis, fig_total_bln,
         # tabel/unduh & kpi
-        metrics_tbl, hist_df, comp_df, csv_bytes, kpis, adf_info, peak_months,
+        metrics_tbl_for_ui, hist_df, comp_df, csv_bytes, kpis, adf_info, peak_months,
         # peta: pivot & figure + html
         pivot_loc_kind, fig_loc_kind, map_html, future_pred_df,
     )

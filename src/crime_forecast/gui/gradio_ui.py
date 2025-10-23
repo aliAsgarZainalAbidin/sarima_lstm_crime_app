@@ -163,19 +163,14 @@ def _process_pipeline_outputs(results):
     # Siapkan file unduhan dari byte CSV
     tsname = int(time.time())
     fname = f"prediksi_hybrid_{tsname}.csv"
-    with open(fname, "wb") as f:
-        f.write(csv_bytes)
 
     # Ekstrak KPI dan statistik diagnostik dengan aman
-    kpis = kpis or {}
     adf_info = adf_info or {}
-    rmse_v, mae_v, mape_v, r2_v = kpis.get("rmse"), kpis.get("mae"), kpis.get("mape"), kpis.get("r2")
     adf_s, adf_p = adf_info.get("adf_stat"), adf_info.get("pvalue")
 
     return (
         fig_main, fig_eda, fig_acf, fig_season, fig_calendar,
-        metrics, hist_df, comp_df, fname,
-        rmse_v, mae_v, mape_v, r2_v, adf_s, adf_p, peak_months,
+        metrics, comp_df, adf_s, adf_p, peak_months,
         fig_top_tkp, fig_top_jenis, fig_perjenis, fig_total_bln,
         map_html, future_pred_df,
     )
@@ -205,18 +200,18 @@ def run_analysis_pipeline(
         error_fig = make_info_fig(f"Terjadi Kesalahan:\n{e}", figsize=(10, 4))
         error_df = pd.DataFrame({"Error": [str(e)]})
         # Mengembalikan tuple dengan ukuran yang benar untuk semua output
-        num_outputs = 24 # Sesuaikan jumlah ini jika output berubah
+        num_outputs = 17 # Sesuaikan jumlah ini jika output berubah
         
         # Buat daftar None dengan ukuran yang benar
         outputs = [None] * num_outputs
         
         # Assign error figure to plot outputs
-        plot_indices = [0, 1, 2, 3, 4, 17, 18, 19, 20] # Indeks plot
+        plot_indices = [0, 1, 2, 3, 4, 10, 11, 12, 13] # Indeks plot
         for i in plot_indices:
             outputs[i] = error_fig
         
         # Assign error dataframe to table outputs
-        df_indices = [5, 6, 7, 16, 22] # Indeks 23 (future_df_state) sekarang menjadi 22
+        df_indices = [5, 6, 9, 16] # Indeks tabel
         for i in df_indices:
             outputs[i] = error_df
 
@@ -299,15 +294,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
             plot_season = gr.Plot(label="Rata-rata Kasus per Bulan")
             plot_calendar = gr.Plot(label="Peta Panas Bulanan (Year × Month)")
             table_metrics = gr.Dataframe(label="Metrik Evaluasi", interactive=False)
-            table_hist = gr.Dataframe(label="Data Historis (setelah praproses)", interactive=False)
             table_comp = gr.Dataframe(label="Perbandingan Prediksi (Test)", interactive=False)
-            download = gr.File(label="Unduh CSV (historis + prediksi)")
-
-            # KPI outputs (numbers) — harus didefinisikan sebelum dipakai di run_btn.click
-            rmse_out = gr.Number(label="RMSE", interactive=False)
-            mae_out = gr.Number(label="MAE", interactive=False)
-            mape_out = gr.Number(label="MAPE (%)", interactive=False)
-            r2_out = gr.Number(label="R²", interactive=False)
 
         with gr.TabItem("📈 Analisis TKP & Jenis"):
             with gr.Row():
@@ -339,8 +326,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
             outputs=[
                 # Tab 3
                 plot_main, plot_eda, plot_acf_pacf, plot_season, plot_calendar,
-                table_metrics, table_hist, table_comp, download,
-                rmse_out, mae_out, mape_out, r2_out, adf_stat, adf_pval, peak_tbl,
+                table_metrics, table_comp, adf_stat, adf_pval, peak_tbl,
                 # Tab 4
                 plot_top_tkp, plot_top_jenis, plot_perjenis, plot_total_bln,
                 # Tab 5 (Peta)
