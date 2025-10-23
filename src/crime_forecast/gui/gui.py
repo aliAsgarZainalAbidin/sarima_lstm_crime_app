@@ -53,6 +53,7 @@ theme = Soft(primary_hue="blue", secondary_hue="slate").set(
     body_background_fill="*neutral_50",
     block_background_fill="white",
     block_shadow="*shadow_drop_lg",
+    # block_radius="24px",
     button_large_padding="18px",
     button_large_radius="18px",
     input_radius="14px",
@@ -87,20 +88,20 @@ hr.sep {
 	background: #e2e8f0;
 	margin: 6px 0 10px 0;
 }
-# div[role="tablist"] {
-# 	display: block !important;
-# }
-# div[class="tab-wrapper svelte-i00v67"] {
-# 	display: block !important;
-# }
-# .contain div[class="tab-wrapper svelte-i00v67"] {
-# 	display: block !important;
-# }
-# .tab-container.svelte-i00v67.svelte-i00v67 {
-# 	display: block !important;
-# 	height: 0;
-# 	padding-bottom: 0;
-# }
+div[role="tablist"] {
+	display: block !important;
+}
+div[class="tab-wrapper svelte-i00v67"] {
+	display: block !important;
+}
+.contain div[class="tab-wrapper svelte-i00v67"] {
+	display: block !important;
+}
+.tab-container.svelte-i00v67.svelte-i00v67 {
+	display: block !important;
+	height: 0;
+	padding-bottom: 0;
+}
 """
 
 EXAMPLE_DATA = pd.DataFrame({
@@ -159,7 +160,7 @@ def _process_pipeline_outputs(results):
     except (ValueError, TypeError):
         # Fallback untuk versi pipeline yang lebih lama
         return tuple([make_info_fig("Error: Pipeline output mismatch.") for _ in range(24)])
-
+    
     # Siapkan file unduhan dari byte CSV
     tsname = int(time.time())
     fname = f"prediksi_hybrid_{tsname}.csv"
@@ -202,136 +203,161 @@ def run_analysis_pipeline(
 
     except Exception as e:
         # Menangani kesalahan dengan menampilkan pesan di beberapa output plot
-        error_fig = make_info_fig(f"Terjadi Kesalahan:\n{e}", figsize=(10, 4))
-        error_df = pd.DataFrame({"Error": [str(e)]})
+        error_fig = make_info_fig(f"Terjadi Kesalahan:\n{e}", figsize=(10, 4)) # For plots
+        error_html = f"<div style='color:red;'>Terjadi Kesalahan: {e}</div>"
+        
         # Mengembalikan tuple dengan ukuran yang benar untuk semua output
-        num_outputs = 24 # Sesuaikan jumlah ini jika output berubah
+        num_outputs = 22 # Total outputs from _process_pipeline_outputs
         
         # Buat daftar None dengan ukuran yang benar
         outputs = [None] * num_outputs
         
         # Assign error figure to plot outputs
-        plot_indices = [0, 1, 2, 3, 4, 17, 18, 19, 20] # Indeks plot
+        plot_indices = [0, 1, 2, 3, 4, 16, 17, 18, 19]
         for i in plot_indices:
             outputs[i] = error_fig
-        
-        # Assign error dataframe to table outputs
-        df_indices = [5, 6, 7, 16, 22] # Indeks 23 (future_df_state) sekarang menjadi 22
-        for i in df_indices:
-            outputs[i] = error_df
 
+        
+        # Assign error message to number outputs
+        number_indices = [9, 10, 11, 12, 13, 14]
+        for i in number_indices:
+            outputs[i] = None # Or np.nan, depending on desired display
+        
+        # Assign error message to HTML output
+        outputs[20] = error_html
+        
         return tuple(outputs)
 
 with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
 
-    # with gr.Sidebar():  
-    #     gr.Markdown(
-    #         f"""
-    #         <div class='app-header'>
-    #             <div style='font-size:28px; font-weight:800;'>{APP_TITLE}</div>
-    #         </div>
-    #         """
-    #     )
+    with gr.Sidebar():  
+        gr.Markdown(
+            f"""
+            <div class='app-header'>
+                <div style='font-size:28px; font-weight:800;'>{APP_TITLE}</div>
+            </div>
+            """
+        )
 
-    #     menu_home = gr.Button("Home", variant = "transparent")
-    #     menu_training = gr.Button("Training & Results", variant = "transparent")
-    #     menu_dashboard = gr.Button("Dashboard", variant="transparent")
+        menu_home = gr.Button("Home", variant = "transparent")
+        menu_training = gr.Button("Training & Results", variant = "transparent")
+        menu_dashboard = gr.Button("Dashboard", variant="transparent")
 
     with gr.Tabs() as main_tabs:
-        with gr.TabItem("Dashboard"):
+        with gr.TabItem("", id="home"):
             gr.Markdown(
                 "Unggah CSV/XLSX atau isi tabel manual. Minimal `date` & `value` untuk forecasting. "
                 "Kolom **opsional** untuk analisis kejadian: `waktu_kejadian`, `tkp`, `jenis_kejahatan`, `jumlah_kejadian`.\n\n"
                 "Untuk **peta**: unggah **File Koordinat TKP** (CSV/XLSX: `tkp,lat,lon`). "
                 "Opsional: unggah **GeoJSON Batas** (kecamatan/kelurahan) untuk choropleth."
             )
-            df_in = gr.Dataframe(
+            with gr.Row():
+                file_in = gr.File(label="Unggah CSV/XLSX (data utama)")
+                df_in = gr.Dataframe(
                     value=EXAMPLE_DATA,
                     headers=list(EXAMPLE_DATA.columns),
                     row_count=(5, "dynamic"),
                     col_count=(5, "dynamic"),
                     label="Atau input manual di sini",
                 )
-            file_in = gr.File(label="Unggah CSV/XLSX (data utama)")
-            
-                
-            date_col = gr.State(value="date")
-            value_col = gr.State(value="value")
+            date_col = gr.State(value="date", )
+            value_col = gr.State(value="value",)
             do_outlier = gr.State(value=True)
             waktu_col = gr.State(value="waktu_kejadian" )
             tkp_col   = gr.State(value="tkp" )
             jenis_col = gr.State(value="jenis_kejahatan" )
             jumlah_col= gr.State(value="jumlah_kejadian" )
-            coords_file = gr.State(value=r"src\crime_forecast\lokasi_kejahatan_gowa_with_coords_20251007_220421 (1).csv")
-            geojson_file = gr.State(value=r"src\crime_forecast\lokasi_kejahatan_gowa_POINTS_20251007_220421.geojson")
+            coords_file = gr.State(value="src\crime_forecast\lokasi_kejahatan_gowa_with_coords_20251007_220421 (1).csv")
+            geojson_file = gr.State(value="src\crime_forecast\lokasi_kejahatan_gowa_POINTS_20251007_220421.geojson")
 
-        with gr.TabItem("🧠 Parameter & Training"):
+        with gr.TabItem("", id="analysis"):
+            gr.Markdown("### Parameter Pelatihan")
+            test_len_state = gr.State(value=15)
+            horizon_state = gr.State(value=12)
+            use_auto_state = gr.State(value=True)
+            p_state = gr.State(value=2)
+            d_state = gr.State(value=0)
+            q_state = gr.State(value=3)
+            P_state = gr.State(value=1)
+            D_state = gr.State(value=0)
+            Q_state = gr.State(value=4)
+            s_state = gr.State(value=4)
+            grid_win_state = gr.State(value="3")
+            grid_hid_state = gr.State(value="124")
+            lr_state = gr.State(value=0.0001)
+            batch_size_state = gr.State(value=32)
+            epochs_state = gr.State(value=200)
+            patience_state = gr.State(value=13)
+
+            gr.Markdown("Catatan: Parameter pelatihan di bawah ini sekarang diatur secara statis menggunakan `gr.State` dan tidak dapat diubah dari UI. Untuk mengubahnya, edit kode sumber.")
+
             with gr.Row():
-                test_len = gr.Slider(0, 36, value=4, step=1, label="Panjang Test (bulan)")
-                horizon = gr.Slider(1, 36, value=12, step=1, label="Horizon Forecast (bulan)")
+                gr.Number(value=test_len_state.value, interactive=False, label="Panjang Test (bulan)")
+                gr.Number(value=horizon_state.value, interactive=False, label="Horizon Forecast (bulan)")
 
             gr.Markdown("**SARIMA**")
             with gr.Row():
-                use_auto = gr.Checkbox(value=True, label="Gunakan auto_arima (pmdarima)")
-                p = gr.Slider(0, 5, value=1, step=1, label="p")
-                d = gr.Slider(0, 2, value=2, step=1, label="d")
-                q = gr.Slider(0, 5, value=2, step=1, label="q")
+                gr.Checkbox(value=use_auto_state.value, interactive=False, label="Gunakan auto_arima (pmdarima)")
+                gr.Number(value=p_state.value, interactive=False, label="p")
+                gr.Number(value=d_state.value, interactive=False, label="d")
+                gr.Number(value=q_state.value, interactive=False, label="q")
             with gr.Row():
-                P = gr.Slider(0, 3, value=1, step=1, label="P")
-                D = gr.Slider(0, 2, value=0, step=1, label="D")
-                Q = gr.Slider(0, 4, value=3, step=1, label="Q")
-                s = gr.Slider(0, 24, value=12, step=1, label="s (musim)")
+                gr.Number(value=P_state.value, interactive=False, label="P")
+                gr.Number(value=D_state.value, interactive=False, label="D")
+                gr.Number(value=Q_state.value, interactive=False, label="Q")
+                gr.Number(value=s_state.value, interactive=False, label="s (musim)")
 
             gr.Markdown("**LSTM Residual (Grid Kecil)**")
             with gr.Row():
-                grid_win = gr.Textbox(value="3,5,6", label="Coba Window (comma-separated)")
-                grid_hid = gr.Textbox(value="16,32,124", label="Coba Hidden Units (comma-separated)")
+                gr.Textbox(value=grid_win_state.value, interactive=False, label="Coba Window (comma-separated)")
+                gr.Textbox(value=grid_hid_state.value, interactive=False, label="Coba Hidden Units (comma-separated)")
             with gr.Row():
-                lr = gr.Number(value=0.001, label="Learning Rate")
-                batch_size = gr.Slider(8, 128, value=32, step=1, label="Batch Size")
-                epochs = gr.Slider(50, 1000, value=200, step=10, label="Epochs")
-                patience = gr.Slider(3, 50, value=13, step=1, label="Patience")
+                gr.Number(value=lr_state.value, interactive=False, label="Learning Rate")
+                gr.Number(value=batch_size_state.value, interactive=False, label="Batch Size")
+                gr.Number(value=epochs_state.value, interactive=False, label="Epochs")
+                gr.Number(value=patience_state.value, interactive=False, label="Patience")
 
             run_btn = gr.Button("▶️ Jalankan Training, Analisis, & Peta", variant="primary")
-            
-            # Diagnostik outputs
-            adf_stat = gr.Number(label="ADF Statistic", interactive=False)
-            adf_pval = gr.Number(label="ADF p-value", interactive=False)
-            peak_tbl = gr.Dataframe(label="3 Bulan Puncak (Rata-rata Tertinggi)", interactive=False)
 
-        with gr.TabItem("📊 Hasil & Unduhan"):
+            gr.Markdown("### Diagnostik & Metrik")
+            with gr.Row():
+                adf_stat = gr.Number(label="ADF Statistic", interactive=False)
+                adf_pval = gr.Number(label="ADF p-value", interactive=False)
+                peak_tbl = gr.Dataframe(label="3 Bulan Puncak (Rata-rata Tertinggi)", interactive=False, type="pandas")
+            
+            with gr.Row():
+                rmse_out = gr.Number(label="RMSE", interactive=False)
+                mae_out = gr.Number(label="MAE", interactive=False)
+                mape_out = gr.Number(label="MAPE (%)", interactive=False)
+                r2_out = gr.Number(label="R²", interactive=False)
+            
+            table_metrics = gr.Dataframe(label="Metrik Evaluasi", interactive=False)
+
+            gr.Markdown("### Hasil Prediksi & Analisis")
             plot_main = gr.Plot(label="Grafik Prediksi: Train/Test, SARIMA vs Hybrid")
             plot_eda = gr.Plot(label="Boxplot & Histogram (setelah outlier handling)")
             plot_acf_pacf = gr.Plot(label="ACF & PACF")
             plot_season = gr.Plot(label="Rata-rata Kasus per Bulan")
             plot_calendar = gr.Plot(label="Peta Panas Bulanan (Year × Month)")
-            table_metrics = gr.Dataframe(label="Metrik Evaluasi", interactive=False)
             table_hist = gr.Dataframe(label="Data Historis (setelah praproses)", interactive=False)
             table_comp = gr.Dataframe(label="Perbandingan Prediksi (Test)", interactive=False)
             download = gr.File(label="Unduh CSV (historis + prediksi)")
 
-            # KPI outputs (numbers) — harus didefinisikan sebelum dipakai di run_btn.click
-            rmse_out = gr.Number(label="RMSE", interactive=False)
-            mae_out = gr.Number(label="MAE", interactive=False)
-            mape_out = gr.Number(label="MAPE (%)", interactive=False)
-            r2_out = gr.Number(label="R²", interactive=False)
-
-        with gr.TabItem("📈 Analisis TKP & Jenis"):
             with gr.Row():
                 plot_top_tkp = gr.Plot(label="Top 10 Lokasi (TKP) Terbanyak")
                 plot_top_jenis = gr.Plot(label="Top 10 Jenis Kejahatan Terbanyak")
-
             with gr.Row():
                 plot_perjenis = gr.Plot(label="Jumlah Kejahatan per Bulan (per Jenis)")
                 plot_total_bln = gr.Plot(label="Jumlah Kejahatan per Bulan (Total)")
 
-        with gr.TabItem("🗺️ Peta Lokasi & Prediksi Masa Depan"):
-            gr.Markdown("Hasil prediksi masa depan akan ditampilkan di sini setelah analisis dijalankan. Anda dapat mengatur panjang prediksi menggunakan `Horizon Forecast` di tab 'Parameter & Training'.")
-
+            gr.Markdown("### Peta & Prediksi Masa Depan")
             with gr.Row():
                 # map html (existing)
                 map_html_comp = gr.HTML(value="<div style='padding:12px'>Peta akan tampil di sini setelah dijalankan.</div>")
                 pred_range_output = gr.Dataframe(label="Hasil Prediksi Jumlah Kejahatan", interactive=False)
+
+        with gr.TabItem("", id="dashboard"): # Keep dashboard tab for future use or if it has other content
+            gr.Markdown("Hasil prediksi masa depan akan ditampilkan di sini setelah analisis dijalankan. Anda dapat mengatur panjang prediksi menggunakan `Horizon Forecast` di tab 'Training & Results'.")
 
         run_btn.click(
             fn=run_analysis_pipeline,
@@ -340,18 +366,34 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
                 date_col, value_col, do_outlier,
                 waktu_col, tkp_col, jenis_col, jumlah_col,
                 coords_file, geojson_file,
-                test_len, use_auto, p, d, q, P, D, Q, s,
-                grid_win, grid_hid, lr, batch_size, epochs, patience, horizon,
+                test_len_state, use_auto_state, p_state, d_state, q_state, P_state, D_state, Q_state, s_state,
+                grid_win_state, grid_hid_state, lr_state, batch_size_state, epochs_state, patience_state, horizon_state,
             ],
             outputs=[
-                # Tab 3
                 plot_main, plot_eda, plot_acf_pacf, plot_season, plot_calendar,
                 table_metrics, table_hist, table_comp, download,
                 rmse_out, mae_out, mape_out, r2_out, adf_stat, adf_pval, peak_tbl,
-                # Tab 4
                 plot_top_tkp, plot_top_jenis, plot_perjenis, plot_total_bln,
-                # Tab 5 (Peta)
-                map_html_comp, pred_range_output, # Hasil future_pred_df langsung ke tabel ini
+                map_html_comp, pred_range_output,
             ],
             show_progress=True,
         )
+    
+    menu_home.click(
+        fn=lambda: gr.update(selected="home"),
+        inputs=None,
+        outputs=[main_tabs],
+    )
+
+    # Updated to point to the consolidated "training" tab
+    menu_training.click( 
+        fn=lambda: gr.update(selected="analysis"),
+        inputs=None,
+        outputs=[main_tabs],
+    )
+
+    menu_dashboard.click(
+        fn=lambda: gr.update(selected="dashboard"),
+        inputs=None,
+        outputs=[main_tabs],
+    )

@@ -27,6 +27,8 @@ from .models.sarima import fit_sarima, sarima_forecast
 from .models.lstm import fit_lstm_and_predict
 from crime_forecast.models.persistence import save_hybrid
 
+import geopandas as gpd
+
 
 def infer_event_columns(df: pd.DataFrame, waktu_name, tkp_name, jenis_name, jumlah_name):
     # normalisasi: mapping nama->lower-strip
@@ -334,7 +336,7 @@ def run_pipeline(
 
     # 13) Peta lokasi (Marker/HeatMap; Choropleth opsional)
     coords_df = read_coords_file(coords_file) if coords_file is not None else None
-    geojson_path = geojson_file.name if geojson_file is not None else None
+    geojson_path = geojson_file if geojson_file is not None else None
     # pass jenis/jumlah column names so map popups include per-type counts
     map_html = make_map_html(df_raw, tkp_c, coords_df=coords_df, geojson_path=geojson_path,
                              jenis_col=jenis_c, jumlah_col=jumlah_c)
