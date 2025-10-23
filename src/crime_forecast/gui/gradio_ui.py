@@ -164,13 +164,9 @@ def _process_pipeline_outputs(results):
     tsname = int(time.time())
     fname = f"prediksi_hybrid_{tsname}.csv"
 
-    # Ekstrak KPI dan statistik diagnostik dengan aman
-    adf_info = adf_info or {}
-    adf_s, adf_p = adf_info.get("adf_stat"), adf_info.get("pvalue")
-
     return (
         fig_main, fig_eda, fig_acf, fig_season, fig_calendar,
-        metrics, comp_df, adf_s, adf_p, peak_months,
+        metrics, comp_df,
         fig_top_tkp, fig_top_jenis, fig_perjenis, fig_total_bln,
         map_html, future_pred_df,
     )
@@ -200,18 +196,18 @@ def run_analysis_pipeline(
         error_fig = make_info_fig(f"Terjadi Kesalahan:\n{e}", figsize=(10, 4))
         error_df = pd.DataFrame({"Error": [str(e)]})
         # Mengembalikan tuple dengan ukuran yang benar untuk semua output
-        num_outputs = 17 # Sesuaikan jumlah ini jika output berubah
+        num_outputs = 14 # Sesuaikan jumlah ini jika output berubah
         
         # Buat daftar None dengan ukuran yang benar
         outputs = [None] * num_outputs
         
         # Assign error figure to plot outputs
-        plot_indices = [0, 1, 2, 3, 4, 10, 11, 12, 13] # Indeks plot
+        plot_indices = [0, 1, 2, 3, 4, 7, 8, 9, 10] # Indeks plot
         for i in plot_indices:
             outputs[i] = error_fig
         
         # Assign error dataframe to table outputs
-        df_indices = [5, 6, 9, 16] # Indeks tabel
+        df_indices = [5, 6, 13] # Indeks tabel
         for i in df_indices:
             outputs[i] = error_df
 
@@ -281,11 +277,6 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
             patience = gr.State(value=13,)
 
             run_btn = gr.Button("▶️ Jalankan Training, Analisis, & Peta", variant="primary")
-            
-            # Diagnostik outputs
-            adf_stat = gr.Number(label="ADF Statistic", interactive=False)
-            adf_pval = gr.Number(label="ADF p-value", interactive=False)
-            peak_tbl = gr.Dataframe(label="3 Bulan Puncak (Rata-rata Tertinggi)", interactive=False)
 
         with gr.TabItem("📊 Hasil & Unduhan"):
             plot_main = gr.Plot(label="Grafik Prediksi: Train/Test, SARIMA vs Hybrid")
@@ -326,7 +317,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
             outputs=[
                 # Tab 3
                 plot_main, plot_eda, plot_acf_pacf, plot_season, plot_calendar,
-                table_metrics, table_comp, adf_stat, adf_pval, peak_tbl,
+                table_metrics, table_comp,
                 # Tab 4
                 plot_top_tkp, plot_top_jenis, plot_perjenis, plot_total_bln,
                 # Tab 5 (Peta)
