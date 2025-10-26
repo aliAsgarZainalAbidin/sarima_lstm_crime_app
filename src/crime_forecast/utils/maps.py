@@ -8,15 +8,21 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
-def read_coords_file(file_obj):
-    if file_obj is None:
+def read_coords_file(file_path_or_obj):
+    if file_path_or_obj is None:
         return None
     try:
-        name = file_obj.name.lower()
-        if name.endswith((".xlsx", ".xls")):
-            df = pd.read_excel(file_obj.name)
+        # Handle both file path (str) and Gradio file object
+        if isinstance(file_path_or_obj, str):
+            filepath = file_path_or_obj
         else:
-            df = pd.read_csv(file_obj.name)
+            filepath = file_path_or_obj.name
+
+        name = filepath.lower()
+        if name.endswith((".xlsx", ".xls")):
+            df = pd.read_excel(filepath)
+        else:
+            df = pd.read_csv(filepath)
         cols = {c: str(c).strip().lower() for c in df.columns}
         tkp = next((k for k, v in cols.items() if v in ["tkp", "lokasi", "tempat", "location", "nama"]), None)
         lat = next((k for k, v in cols.items() if v in ["lat", "latitude", "y"]), None)
