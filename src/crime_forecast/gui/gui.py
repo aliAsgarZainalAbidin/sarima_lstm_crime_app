@@ -241,7 +241,6 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
 
         menu_home = gr.Button("Home", variant = "transparent")
         menu_training = gr.Button("Training & Results", variant = "transparent")
-        menu_dashboard = gr.Button("Dashboard", variant="transparent")
 
     with gr.Tabs() as main_tabs:
         with gr.TabItem("", id="home"):
@@ -356,9 +355,6 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
                 map_html_comp = gr.HTML(value="<div style='padding:12px'>Peta akan tampil di sini setelah dijalankan.</div>")
                 pred_range_output = gr.Dataframe(label="Hasil Prediksi Jumlah Kejahatan", interactive=False)
 
-        with gr.TabItem("", id="dashboard"): # Keep dashboard tab for future use or if it has other content
-            gr.Markdown("Hasil prediksi masa depan akan ditampilkan di sini setelah analisis dijalankan. Anda dapat mengatur panjang prediksi menggunakan `Horizon Forecast` di tab 'Training & Results'.")
-
         run_btn.click(
             fn=run_analysis_pipeline,
             inputs=[
@@ -388,12 +384,6 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
     # Updated to point to the consolidated "training" tab
     menu_training.click( 
         fn=lambda: gr.update(selected="analysis"),
-        inputs=None,
-        outputs=[main_tabs],
-    )
-
-    menu_dashboard.click(
-        fn=lambda: gr.update(selected="dashboard"),
         inputs=None,
         outputs=[main_tabs],
     )

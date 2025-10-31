@@ -123,9 +123,13 @@ def run_pipeline(
     train = ts_clean.iloc[:-test_len].copy() if test_len > 0 else ts_clean.copy()
     test = ts_clean.iloc[-test_len:].copy() if test_len > 0 else ts_clean.iloc[0:0].copy()
 
+    # print(len(train))
+    # print(len(test))
+
     # 4) Log-transform
     train_t = np.log1p(train["value"])
     test_t = np.log1p(test["value"]) if test_len > 0 else pd.Series(dtype=float)
+    # print(train_t)
 
     # 5) SARIMA (optional auto_arima)
     order, seasonal_order = (1, 2, 2), (1, 0, 3, 7)
@@ -198,10 +202,12 @@ def run_pipeline(
     )
 
     # 7) Rescale & evaluate
-    sarima_pred = np.expm1(sarima_forecast_test_t.values).clip(min=0) if test_len > 0 else np.array([])
-    hybrid_pred = (np.expm1(sarima_forecast_test_t.values + pred_res_test_t).clip(min=0)
+    # print(sarima_forecast_test_t)
+    # print(pred_res_test_t)
+    sarima_pred_float = np.expm1(sarima_forecast_test_t.values).clip(min=0) if test_len > 0 else np.array([])
+    hybrid_pred_float = (np.expm1(sarima_forecast_test_t.values + pred_res_test_t).clip(min=0)
                    if test_len > 0 else np.array([]))
-    y_true_test = test["value"].values if test_len > 0 else np.array([])
+    y_true_test = test["value"].values.astype(int) if test_len > 0 else np.array([])
 
     # 7b) Future forecast
     future_pred_df = pd.DataFrame()
@@ -235,8 +241,8 @@ def run_pipeline(
     ax.plot(train.index, train["value"], label="Train")
     if test_len > 0:
         ax.plot(test.index, test["value"], label="Test")
-        ax.plot(test.index, sarima_pred, label="SARIMA")
-        ax.plot(test.index, hybrid_pred, label="Hybrid")
+        ax.plot(test.index, sarima_pred_float, label="SARIMA")
+        ax.plot(test.index, hybrid_pred_float, label="Hybrid")
     ax.set_title(f"Monthly Prediction: SARIMA vs Hybrid — best (win, hidden) = {best_conf}")
     ax.set_xlabel("Year"); ax.set_ylabel("Number of Cases"); ax.legend(); ax.grid(True)
     plt.tight_layout()
@@ -361,8 +367,8 @@ def run_pipeline(
     comp_df = pd.DataFrame()
     if test_len > 0:
         comp_df = pd.DataFrame(
-            {"date": test.index.strftime("%Y-%m-%d"),
-             "Actual": y_true_test, "SARIMA": sarima_pred, "Hybrid": hybrid_pred}
+            {"date": test.index.strftime("%Y-%m-%d"), "Actual": y_true_test,
+             "SARIMA": np.round(sarima_pred_float).astype(int), "Hybrid": np.round(hybrid_pred_float).astype(int)}
         )
 
     out_buf = io.StringIO()
@@ -387,18 +393,21 @@ def run_pipeline(
     except Exception:
         adf_info = {"adf_stat": None, "pvalue": None}
 
+    sarima_pred_rounded = np.round(sarima_pred_float).astype(int)
+    hybrid_pred_rounded = np.round(hybrid_pred_float).astype(int)
+
     metrics_tbl = pd.DataFrame({
         "SARIMA": {
-            "RMSE": np.nan if test_len==0 else rmse_formula(y_true_test, sarima_pred),
-            "MAE":  np.nan if test_len==0 else mae_formula(y_true_test, sarima_pred),
-            "R²":   np.nan if test_len==0 else r2_formula(y_true_test, sarima_pred),
-            "MAPE (%)": np.nan if test_len==0 else mape(y_true_test, sarima_pred),
+            "RMSE": np.nan if test_len == 0 else rmse_formula(y_true_test, sarima_pred_rounded),
+            "MAE":  np.nan if test_len == 0 else mae_formula(y_true_test, sarima_pred_rounded),
+            "R²":   np.nan if test_len == 0 else r2_formula(y_true_test, sarima_pred_rounded),
+            "MAPE (%)": np.nan if test_len == 0 else mape(y_true_test, sarima_pred_rounded),
         },
         "Hybrid_SARIMA_LSTM": {
-            "RMSE": np.nan if test_len==0 else rmse_formula(y_true_test, hybrid_pred),
-            "MAE":  np.nan if test_len==0 else mae_formula(y_true_test, hybrid_pred),
-            "R²":   np.nan if test_len==0 else r2_formula(y_true_test, hybrid_pred),
-            "MAPE (%)": np.nan if test_len==0 else mape(y_true_test, hybrid_pred),
+            "RMSE": np.nan if test_len == 0 else rmse_formula(y_true_test, hybrid_pred_rounded),
+            "MAE":  np.nan if test_len == 0 else mae_formula(y_true_test, hybrid_pred_rounded),
+            "R²":   np.nan if test_len == 0 else r2_formula(y_true_test, hybrid_pred_rounded),
+            "MAPE (%)": np.nan if test_len == 0 else mape(y_true_test, hybrid_pred_rounded),
         },
     }).T
 
@@ -419,12 +428,12 @@ def run_pipeline(
     # scaler_obj = scaler used for LSTM residuals (e.g. MinMaxScaler or StandardScaler)
     #
     # assign available objects in this scope (use None for items not stored) and save artifacts:
-    models_dir = Path("models/hybrid")
-    sarima_res = sarima_fit_t  # use fitted SARIMA from earlier in the pipeline
-    lstm_model = None          # fit_lstm_and_predict does not return the model here; set to None or provide the model if available
-    scaler_obj = None          # no scaler object was created/stored in this pipeline; set to None or provide if available
-    save_meta = save_hybrid(sarima_res, lstm_model, scaler=scaler_obj, models_dir=models_dir)
-    # save_meta contains paths to sarima, lstm, scaler and metadata
+    # models_dir = Path("models/hybrid")
+    # sarima_res = sarima_fit_t  # use fitted SARIMA from earlier in the pipeline
+    # lstm_model = None          # fit_lstm_and_predict does not return the model here; set to None or provide the model if available
+    # scaler_obj = None          # no scaler object was created/stored in this pipeline; set to None or provide if available
+    # save_meta = save_hybrid(sarima_res, lstm_model, scaler=scaler_obj, models_dir=models_dir)
+    # # save_meta contains paths to sarima, lstm, scaler and metadata
 
     return (
         # Prediksi & EDA
