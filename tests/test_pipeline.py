@@ -2,6 +2,7 @@ import pytest
 from src.crime_forecast.pipeline import run_pipeline
 import pandas as pd
 
+
 @pytest.fixture
 def sample_data():
     data = {
@@ -13,6 +14,7 @@ def sample_data():
         "jumlah_kejadian": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     }
     return pd.DataFrame(data)
+
 
 def test_run_pipeline(sample_data):
     result = run_pipeline(
@@ -44,7 +46,10 @@ def test_run_pipeline(sample_data):
         horizon=3,
     )
     assert isinstance(result, tuple)
-    assert len(result) == 15  # Adjust based on the expected number of return values from run_pipeline
+    assert (
+        len(result) == 15
+    )  # Adjust based on the expected number of return values from run_pipeline
+
 
 def test_run_pipeline_invalid_data():
     invalid_data = pd.DataFrame({"invalid_col": [1, 2, 3]})

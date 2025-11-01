@@ -1,15 +1,31 @@
 import numpy as np
 import pandas as pd
 import torch
-from pathlib import Path
-from crime_forecast.models.persistence import load_sarima, load_lstm_state, load_scaler, load_metadata
+from crime_forecast.models.persistence import (
+    load_sarima,
+    load_lstm_state,
+    load_scaler,
+)
 from datetime import datetime
-import math
+
 
 def months_between(start_date, end_date):
-    return (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month) + 1
+    return (
+        (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month) + 1
+    )
 
-def forecast_with_hybrid(sarima_path, lstm_model_class, lstm_state_path, scaler_path, hist_series, start_month, end_month, device="cpu", window=12):
+
+def forecast_with_hybrid(
+    sarima_path,
+    lstm_model_class,
+    lstm_state_path,
+    scaler_path,
+    hist_series,
+    start_month,
+    end_month,
+    device="cpu",
+    window=12,
+):
     """
     sarima_path: path to saved SARIMA pickle
     lstm_model_class: callable that returns an uninitialized LSTM model of same architecture used in training
@@ -45,18 +61,27 @@ def forecast_with_hybrid(sarima_path, lstm_model_class, lstm_state_path, scaler_
     # 1) SARIMA point forecast
     try:
         sarima_pred = sarima.get_forecast(steps=horizon)
-        sarima_mean = pd.Series(sarima_pred.predicted_mean.values, index=pd.date_range(s.index.max() + pd.offsets.MonthBegin(1), periods=horizon, freq="MS"))
+        sarima_mean = pd.Series(
+            sarima_pred.predicted_mean.values,
+            index=pd.date_range(
+                s.index.max() + pd.offsets.MonthBegin(1), periods=horizon, freq="MS"
+            ),
+        )
     except Exception:
         # fallback: use sarima.predict(start, end) if available
         last = s.index.max()
-        future_idx = pd.date_range(last + pd.offsets.MonthBegin(1), periods=horizon, freq="MS")
-        sarima_mean = pd.Series([float(s.mean())]*horizon, index=future_idx)
+        future_idx = pd.date_range(
+            last + pd.offsets.MonthBegin(1), periods=horizon, freq="MS"
+        )
+        sarima_mean = pd.Series([float(s.mean())] * horizon, index=future_idx)
 
     # 2) prepare residual series (historical residual = actual - sarima_fitted)
     residuals = None
     try:
         if hasattr(sarima, "fittedvalues"):
-            fitted = pd.Series(sarima.fittedvalues, index=s.index[: len(sarima.fittedvalues)])
+            fitted = pd.Series(
+                sarima.fittedvalues, index=s.index[: len(sarima.fittedvalues)]
+            )
             # align lengths
             fitted = fitted.reindex(s.index).fillna(method="ffill")
             residuals = s - fitted
@@ -70,18 +95,33 @@ def forecast_with_hybrid(sarima_path, lstm_model_class, lstm_state_path, scaler_
     res_arr = residuals.values.astype(float)
     # normalize if scaler provided
     if scaler is not None:
-        res_scaled = scaler.transform(res_arr.reshape(-1,1)).flatten()
+        res_scaled = scaler.transform(res_arr.reshape(-1, 1)).flatten()
     else:
         res_scaled = (res_arr - np.mean(res_arr)) / (np.std(res_arr) + 1e-8)
 
     # take last window values
-    buf = list(res_scaled[-window:]) if len(res_scaled) >= window else list(np.pad(res_scaled, (window - len(res_scaled), 0), "constant", constant_values=0.0))
+    buf = (
+        list(res_scaled[-window:])
+        if len(res_scaled) >= window
+        else list(
+            np.pad(
+                res_scaled,
+                (window - len(res_scaled), 0),
+                "constant",
+                constant_values=0.0,
+            )
+        )
+    )
 
     lstm.to(device)
     lstm.eval()
     with torch.no_grad():
         for step in range(horizon):
-            x = torch.tensor(buf[-window:], dtype=torch.float32).reshape(1, window, 1).to(device)
+            x = (
+                torch.tensor(buf[-window:], dtype=torch.float32)
+                .reshape(1, window, 1)
+                .to(device)
+            )
             out = lstm(x)  # expect model returns single-step scalar tensor
             if isinstance(out, tuple):
                 out = out[0]
@@ -91,7 +131,9 @@ def forecast_with_hybrid(sarima_path, lstm_model_class, lstm_state_path, scaler_
 
     # inverse-transform residual predictions
     if scaler is not None:
-        preds_res_arr = scaler.inverse_transform(np.array(preds_res).reshape(-1,1)).flatten()
+        preds_res_arr = scaler.inverse_transform(
+            np.array(preds_res).reshape(-1, 1)
+        ).flatten()
     else:
         # inverse of z-score used above
         mu = np.mean(res_arr)
@@ -100,7 +142,7 @@ def forecast_with_hybrid(sarima_path, lstm_model_class, lstm_state_path, scaler_
 
     # 4) combine sarima + residual predictions and return only requested months
     combined = sarima_mean.copy()
-    combined.iloc[:] = combined.values + preds_res_arr[:len(combined)]
+    combined.iloc[:] = combined.values + preds_res_arr[: len(combined)]
 
     # trim to requested start..end range (in case pipeline/horizon mismatched)
     mask = (combined.index >= start) & (combined.index <= end)

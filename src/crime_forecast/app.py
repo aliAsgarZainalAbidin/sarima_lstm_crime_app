@@ -1,16 +1,13 @@
 from gradio.themes import Soft
-import gradio as gr
-import pandas as pd
-import numpy as np
 import sys
 from pathlib import Path
+import gradio as gr
+
 # pastikan folder "src" ada di sys.path sehingga import crime_forecast berhasil
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import time
 import warnings
 
-from crime_forecast.pipeline import run_pipeline
 from crime_forecast.gui.gradio_ui import demo
 
 warnings.filterwarnings("ignore")
@@ -20,6 +17,7 @@ APP_TAGLINE = (
     "Pra-pemrosesan bulanan + pembersihan outlier, EDA (ADF/ACF/PACF), "
     "pelatihan SARIMA + LSTM residual, evaluasi, analisis TKP/Jenis, kalender musiman, dan peta lokasi."
 )
+
 
 def main():
     theme = Soft(primary_hue="blue", secondary_hue="slate").set(
@@ -34,5 +32,8 @@ def main():
 
     demo.launch(share=False)
 
+
 if __name__ == "__main__":
+    # gr.themes.builder()
+
     main()

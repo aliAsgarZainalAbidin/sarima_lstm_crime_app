@@ -1,13 +1,14 @@
 from gradio.themes import Soft
 import pandas as pd
 import numpy as np
-import time
 import gradio as gr
-from datetime import datetime, date
 from .gradio_callbacks import (
     run_analysis_pipeline,
-    save_new_event, import_data_to_db, load_data_from_db
+    save_new_event,
+    import_data_to_db,
+    load_data_from_db,
 )
+
 
 # helper: prefer gr.datetime if available, fallback to other Date/Datetime variants or Text
 def make_month_picker(label, placeholder=None):
@@ -49,14 +50,7 @@ APP_TAGLINE = (
     "pelatihan SARIMA + LSTM residual, evaluasi, analisis TKP/Jenis, kalender musiman, dan peta lokasi."
 )
 
-theme = Soft(primary_hue="blue", secondary_hue="slate").set(
-    body_background_fill="*neutral_50",
-    block_background_fill="white",
-    block_shadow="*shadow_drop_lg",
-    button_large_padding="18px",
-    button_large_radius="18px",
-    input_radius="14px",
-)
+theme = Soft(primary_hue="blue", secondary_hue="slate")
 
 CUSTOM_CSS = """
 .app-header {
@@ -87,96 +81,160 @@ hr.sep {
 	background: #e2e8f0;
 	margin: 6px 0 10px 0;
 }
+#form-input-column h2 {
+    margin-bottom: 12px;
+}
 """
 
-EXAMPLE_DATA = pd.DataFrame({
-    "date": pd.date_range("2019-01-01", periods=36, freq="MS"),
-    "value": np.random.poisson(lam=120, size=36),
-    "waktu_kejadian": pd.date_range("2019-01-10", periods=36, freq="MS"),
-    "tkp": np.random.choice(["Pattallassang","Somba Opu","Pallangga","Bajeng"], size=36),
-    "jenis_kejahatan": np.random.choice(["Pencurian","Penganiayaan","Curanmor"], size=36),
-})
+EXAMPLE_DATA = pd.DataFrame(
+    {
+        "date": pd.date_range("2019-01-01", periods=36, freq="MS"),
+        "value": np.random.poisson(lam=120, size=36),
+        "waktu_kejadian": pd.date_range("2019-01-10", periods=36, freq="MS"),
+        "tkp": np.random.choice(
+            ["Pattallassang", "Somba Opu", "Pallangga", "Bajeng"], size=36
+        ),
+        "jenis_kejahatan": np.random.choice(
+            ["Pencurian", "Penganiayaan", "Curanmor"], size=36
+        ),
+    }
+)
 
 with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
-
-    # with gr.Sidebar():  
-    #     gr.Markdown(
-    #         f"""
-    #         <div class='app-header'>
-    #             <div style='font-size:28px; font-weight:800;'>{APP_TITLE}</div>
-    #         </div>
-    #         """
-    #     )
-
-    #     menu_home = gr.Button("Home", variant = "transparent")
-    #     menu_training = gr.Button("Training & Results", variant = "transparent")
-    #     menu_dashboard = gr.Button("Dashboard", variant="transparent")
-
     with gr.Tabs() as main_tabs:
         with gr.TabItem("Input Data Kejadian"):
-            gr.Markdown("### Input Data Kejadian Baru")
-            gr.Markdown("Gunakan form ini untuk menambahkan data kejadian kriminal satu per satu ke dalam database lokal (file `database_kejadian.csv`).")
-            input_waktu = gr.DateTime(label="Waktu Kejadian")
-            input_jenis = gr.Dropdown(
-                label="Jenis Kejahatan",
-                choices=["cabul", "cacul", "cunmor", "curanmor", "curas", "curat", "kdrt", "pencurian", "penganiayaan", "pengeroyokan", "penggelapan", "penghinaan", "penipuan"]
-            )
-            input_tkp = gr.Dropdown(
-                label="Tempat Kejadian Perkara (TKP)",
-                choices=["bajeng", "bajeng barat", "barombong", "biringbulu", "bontolempangan", "bontomarannu", "bontonompo", "bontonomposelatan", "bungaya", "manuju", "pallangga", "parangloe", "parigi", "pattallassang", "sombaopu", "tinggimoncong", "tombolopao", "tompobulu"]
-            )
-            save_button = gr.Button("Simpan Data Kejadian", variant="primary")
-            status_message = gr.Textbox(label="Status", interactive=False)
+            with gr.Row(variant="compact", equal_height=True):
+                with gr.Column(scale=2):
+                    with gr.Row():
+                        with gr.Column(scale=4):
+                            gr.Markdown("## Impor Data Kejadian dari File")
+                        with gr.Column(scale=1, min_width=80):
+                            import_file_input = gr.UploadButton(
+                                "Import",
+                                file_types=[".csv", ".xlsx"],
+                                file_count="single",
+                                icon="src/crime_forecast/assets/icons/upload.svg",
+                                variant="secondary",
+                            )
 
-            gr.Markdown("---")
-            gr.Markdown("### Impor Data dari File (Excel/CSV)")
-            gr.Markdown("Unggah file dengan kolom `waktu_kejadian`, `jenis_kejahatan`, dan `tkp`. Kolom `jumlah_kejadian` bersifat opsional (default 1).")
-            import_file_input = gr.File(label="Unggah File untuk Impor Massal")
-            import_button = gr.Button("Impor dari File ke Database", variant="secondary")
-            import_status_message = gr.Textbox(label="Status Impor", interactive=False)
+                    db_table_output = gr.Dataframe(
+                        label="",
+                        interactive=False,
+                        show_label=False,
+                        headers=[
+                            "Waktu Kejadian",
+                            "Jenis Kejadian",
+                            "TKP",
+                            "Jumlah Kejadian",
+                        ],
+                    )
 
-            gr.Markdown("---")
-            gr.Markdown("### Data untuk Analisis")
-            gr.Markdown(
-                "Data untuk analisis diambil langsung dari database. "
-                "Gunakan tombol di bawah untuk memuat atau memuat ulang data dari database sebelum menjalankan analisis."
-            )
-            with gr.Row():
-                load_db_button = gr.Button("Muat Ulang Data dari Database")
-            
-            db_table_output = gr.Dataframe(label="Data Kejadian dari Database (Input untuk Training)", interactive=False)
+                    date_col = gr.State(value="waktu_kejadian")
+                    value_col = gr.State(value="value")
+                    do_outlier = gr.State(value=True)
+                    waktu_col = gr.State(value="waktu_kejadian")
+                    tkp_col = gr.State(value="tkp")
+                    jenis_col = gr.State(value="jenis_kejahatan")
+                    jumlah_col = gr.State(value="jumlah_kejadian")
+                    coords_file = gr.State(
+                        value=r"src/crime_forecast/lokasi_kejahatan_gowa_with_coords_20251007_220421 (1).csv"
+                    )
+                    geojson_file = gr.State(
+                        value=r"src/crime_forecast/lokasi_kejahatan_gowa_POINTS_20251007_220421.geojson"
+                    )
 
-            date_col = gr.State(value="waktu_kejadian")
-            value_col = gr.State(value="value")
-            do_outlier = gr.State(value=True)
-            waktu_col = gr.State(value="waktu_kejadian")
-            tkp_col = gr.State(value="tkp")
-            jenis_col = gr.State(value="jenis_kejahatan")
-            jumlah_col = gr.State(value="jumlah_kejadian")
-            coords_file = gr.State(value=r"src/crime_forecast/lokasi_kejahatan_gowa_with_coords_20251007_220421 (1).csv")
-            geojson_file = gr.State(value=r"src/crime_forecast/lokasi_kejahatan_gowa_POINTS_20251007_220421.geojson")
+                with gr.Column(scale=1, min_width=350):
+                    gr.Markdown("## Input Data Kejadian Baru")
+                    input_waktu = gr.DateTime(label="Waktu Kejadian")
+                    input_jenis = gr.Dropdown(
+                        label="Jenis Kejahatan",
+                        choices=[
+                            "cabul",
+                            "cacul",
+                            "cunmor",
+                            "curanmor",
+                            "curas",
+                            "curat",
+                            "kdrt",
+                            "pencurian",
+                            "penganiayaan",
+                            "pengeroyokan",
+                            "penggelapan",
+                            "penghinaan",
+                            "penipuan",
+                        ],
+                    )
+                    input_tkp = gr.Dropdown(
+                        label="Tempat Kejadian Perkara (TKP)",
+                        choices=[
+                            "bajeng",
+                            "bajeng barat",
+                            "barombong",
+                            "biringbulu",
+                            "bontolempangan",
+                            "bontomarannu",
+                            "bontonompo",
+                            "bontonomposelatan",
+                            "bungaya",
+                            "manuju",
+                            "pallangga",
+                            "parangloe",
+                            "parigi",
+                            "pattallassang",
+                            "sombaopu",
+                            "tinggimoncong",
+                            "tombolopao",
+                            "tompobulu",
+                        ],
+                    )
+                    save_button = gr.Button(
+                        "Simpan",
+                        variant="primary",
+                    )
 
         with gr.TabItem("Analisis"):
             test_len = gr.State(value=15)
-            horizon = gr.Number(label="Jumlah Bulan Prediksi (bulan)", value=6, step=1, minimum=1)
+            horizon = gr.Number(
+                label="Jumlah Bulan Prediksi (bulan)", value=6, step=1, minimum=1
+            )
 
             use_auto = gr.State(value=True)
-            p = gr.State(value=2,)
-            d = gr.State(value=0,)
-            q = gr.State(value=3,)
-            P = gr.State(value=1,)
-            D = gr.State(value=0,)
-            Q = gr.State(value=4,)
+            p = gr.State(
+                value=2,
+            )
+            d = gr.State(
+                value=0,
+            )
+            q = gr.State(
+                value=3,
+            )
+            P = gr.State(
+                value=1,
+            )
+            D = gr.State(
+                value=0,
+            )
+            Q = gr.State(
+                value=4,
+            )
             s = gr.State(value=4)
 
             grid_win = gr.State(value="6")
             grid_hid = gr.State(value="124")
             lr = gr.State(value=0.001)
-            batch_size = gr.State(value=8,)
-            epochs = gr.State(value=200,)
-            patience = gr.State(value=13,)
+            batch_size = gr.State(
+                value=8,
+            )
+            epochs = gr.State(
+                value=200,
+            )
+            patience = gr.State(
+                value=13,
+            )
 
-            run_btn = gr.Button("▶️ Jalankan Training, Analisis, & Peta", variant="primary")
+            run_btn = gr.Button(
+                "▶️ Jalankan Training, Analisis, & Peta", variant="primary"
+            )
 
         with gr.TabItem("📊 Hasil & Unduhan"):
             plot_main = gr.Plot(label="Grafik Prediksi: Train/Test, SARIMA vs Hybrid")
@@ -185,7 +243,9 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
             plot_season = gr.Plot(label="Rata-rata Kasus per Bulan")
             plot_calendar = gr.Plot(label="Peta Panas Bulanan (Year × Month)")
             table_metrics = gr.Dataframe(label="Metrik Evaluasi", interactive=False)
-            table_comp = gr.Dataframe(label="Perbandingan Prediksi (Test)", interactive=False)
+            table_comp = gr.Dataframe(
+                label="Perbandingan Prediksi (Test)", interactive=False
+            )
 
         with gr.TabItem("📈 Analisis TKP & Jenis"):
             with gr.Row():
@@ -197,49 +257,230 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
                 plot_total_bln = gr.Plot(label="Jumlah Kejahatan per Bulan (Total)")
 
         with gr.TabItem("🗺️ Peta Lokasi & Prediksi Masa Depan"):
-            gr.Markdown("Hasil prediksi masa depan akan ditampilkan di sini setelah analisis dijalankan. Anda dapat mengatur panjang prediksi menggunakan `Horizon Forecast` di tab 'Parameter & Training'.")
-
-            with gr.Row():
-                # map html (existing)
-                map_html_comp = gr.HTML(value="<div style='padding:12px'>Peta akan tampil di sini setelah dijalankan.</div>")
-                pred_range_output = gr.Dataframe(label="Hasil Prediksi Jumlah Kejahatan", interactive=False)
+            with gr.Row(variant="compact"):
+                with gr.Column(scale=2):                
+                    gr.Markdown("## Peta Lokasi Kejahatan")
+                    map_html_comp = gr.HTML(
+                        value="<div style='padding:12px'>Peta akan tampil di sini setelah dijalankan.</div>"
+                    )
+                with gr.Column(scale=1, min_width=350):
+                    gr.Markdown("## Hasil Prediksi Masa Depan")
+                    pred_range_output = gr.Dataframe(
+                        label="Hasil Prediksi Jumlah Kejahatan",
+                        interactive=False,
+                        show_label=False,
+                    )
 
         save_button.click(
             fn=save_new_event,
             inputs=[input_waktu, input_jenis, input_tkp],
-            outputs=[status_message]
-        )
-
-        import_button.click(
-            fn=import_data_to_db,
-            inputs=[import_file_input],
-            outputs=[import_status_message]
-        )
-
-        load_db_button.click(
+        ).then(
             fn=load_data_from_db,
             inputs=None,
-            outputs=[db_table_output]
+            outputs=[db_table_output],
+        ).then(
+            fn=run_analysis_pipeline,
+            inputs=[
+                db_table_output,
+                date_col,
+                value_col,
+                do_outlier,
+                waktu_col,
+                tkp_col,
+                jenis_col,
+                jumlah_col,
+                coords_file,
+                geojson_file,
+                test_len,
+                use_auto,
+                p,
+                d,
+                q,
+                P,
+                D,
+                Q,
+                s,
+                grid_win,
+                grid_hid,
+                lr,
+                batch_size,
+                epochs,
+                patience,
+                horizon,
+            ],
+            outputs=[
+                # Tab 3
+                plot_main,
+                plot_eda,
+                plot_acf_pacf,
+                plot_season,
+                plot_calendar,
+                table_metrics,
+                table_comp,
+                # Tab 4
+                plot_top_tkp,
+                plot_top_jenis,
+                plot_perjenis,
+                plot_total_bln,  # 4
+                # Tab 5 (Peta)
+                map_html_comp,
+                pred_range_output,  # Hasil future_pred_df langsung ke tabel ini
+            ],
+            show_progress=True,
+        )
+
+        import_file_input.upload(
+            fn=import_data_to_db,
+            inputs=[import_file_input],
+        ).then(fn=load_data_from_db, inputs=None, outputs=[db_table_output]).then(
+            fn=run_analysis_pipeline,
+            inputs=[
+                db_table_output,
+                date_col,
+                value_col,
+                do_outlier,
+                waktu_col,
+                tkp_col,
+                jenis_col,
+                jumlah_col,
+                coords_file,
+                geojson_file,
+                test_len,
+                use_auto,
+                p,
+                d,
+                q,
+                P,
+                D,
+                Q,
+                s,
+                grid_win,
+                grid_hid,
+                lr,
+                batch_size,
+                epochs,
+                patience,
+                horizon,
+            ],
+            outputs=[
+                # Tab 3
+                plot_main,
+                plot_eda,
+                plot_acf_pacf,
+                plot_season,
+                plot_calendar,
+                table_metrics,
+                table_comp,
+                # Tab 4
+                plot_top_tkp,
+                plot_top_jenis,
+                plot_perjenis,
+                plot_total_bln,  # 4
+                # Tab 5 (Peta)
+                map_html_comp,
+                pred_range_output,  # Hasil future_pred_df langsung ke tabel ini
+            ],
+            show_progress=True,
         )
 
         run_btn.click(
             fn=run_analysis_pipeline,
             inputs=[
                 db_table_output,
-                date_col, value_col, do_outlier,
-                waktu_col, tkp_col, jenis_col, jumlah_col,
-                coords_file, geojson_file,
-                test_len, use_auto, p, d, q, P, D, Q, s,
-                grid_win, grid_hid, lr, batch_size, epochs, patience, horizon,
+                date_col,
+                value_col,
+                do_outlier,
+                waktu_col,
+                tkp_col,
+                jenis_col,
+                jumlah_col,
+                coords_file,
+                geojson_file,
+                test_len,
+                use_auto,
+                p,
+                d,
+                q,
+                P,
+                D,
+                Q,
+                s,
+                grid_win,
+                grid_hid,
+                lr,
+                batch_size,
+                epochs,
+                patience,
+                horizon,
             ],
             outputs=[
                 # Tab 3
-                plot_main, plot_eda, plot_acf_pacf, plot_season, plot_calendar,
-                table_metrics, table_comp,
+                plot_main,
+                plot_eda,
+                plot_acf_pacf,
+                plot_season,
+                plot_calendar,
+                table_metrics,
+                table_comp,
                 # Tab 4
-                plot_top_tkp, plot_top_jenis, plot_perjenis, plot_total_bln, # 4
+                plot_top_tkp,
+                plot_top_jenis,
+                plot_perjenis,
+                plot_total_bln,  # 4
                 # Tab 5 (Peta)
-                map_html_comp, pred_range_output, # Hasil future_pred_df langsung ke tabel ini
+                map_html_comp,
+                pred_range_output,  # Hasil future_pred_df langsung ke tabel ini
             ],
             show_progress=True,
         )
+
+    demo.load(load_data_from_db, inputs=None, outputs=[db_table_output]).then(
+        fn=run_analysis_pipeline,
+        inputs=[
+            db_table_output,
+            date_col,
+            value_col,
+            do_outlier,
+            waktu_col,
+            tkp_col,
+            jenis_col,
+            jumlah_col,
+            coords_file,
+            geojson_file,
+            test_len,
+            use_auto,
+            p,
+            d,
+            q,
+            P,
+            D,
+            Q,
+            s,
+            grid_win,
+            grid_hid,
+            lr,
+            batch_size,
+            epochs,
+            patience,
+            horizon,
+        ],
+        outputs=[
+            # Tab 3
+            plot_main,
+            plot_eda,
+            plot_acf_pacf,
+            plot_season,
+            plot_calendar,
+            table_metrics,
+            table_comp,
+            # Tab 4
+            plot_top_tkp,
+            plot_top_jenis,
+            plot_perjenis,
+            plot_total_bln,  # 4
+            # Tab 5 (Peta)
+            map_html_comp,
+            pred_range_output,  # Hasil future_pred_df langsung ke tabel ini
+        ],
+        show_progress=True,
+    )

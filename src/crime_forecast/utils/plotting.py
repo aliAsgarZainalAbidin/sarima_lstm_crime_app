@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
+
 def counts_per_location_type(df, lokasi_col, jenis_col, jumlah_col=None):
     """
     Kembalikan pivot table: index=lokasi, columns=jenis_kejahatan, values=jumlah (atau count).
@@ -11,12 +12,24 @@ def counts_per_location_type(df, lokasi_col, jenis_col, jumlah_col=None):
     if df is None or lokasi_col not in df.columns or jenis_col not in df.columns:
         return pd.DataFrame()  # kosong sebagai fallback
 
-    if jumlah_col and (jumlah_col in df.columns) and pd.api.types.is_numeric_dtype(df[jumlah_col]):
+    if (
+        jumlah_col
+        and (jumlah_col in df.columns)
+        and pd.api.types.is_numeric_dtype(df[jumlah_col])
+    ):
         agg = df.groupby([lokasi_col, jenis_col])[jumlah_col].sum().reset_index()
-        pivot = agg.pivot(index=lokasi_col, columns=jenis_col, values=jumlah_col).fillna(0).astype(int)
+        pivot = (
+            agg.pivot(index=lokasi_col, columns=jenis_col, values=jumlah_col)
+            .fillna(0)
+            .astype(int)
+        )
     else:
         agg = df.groupby([lokasi_col, jenis_col]).size().reset_index(name="count")
-        pivot = agg.pivot(index=lokasi_col, columns=jenis_col, values="count").fillna(0).astype(int)
+        pivot = (
+            agg.pivot(index=lokasi_col, columns=jenis_col, values="count")
+            .fillna(0)
+            .astype(int)
+        )
 
     # urut berdasarkan total kejadian menurun
     pivot["__total__"] = pivot.sum(axis=1)
@@ -24,7 +37,8 @@ def counts_per_location_type(df, lokasi_col, jenis_col, jumlah_col=None):
     pivot = pivot.drop(columns="__total__")
     return pivot
 
-def plot_counts_per_location_type(pivot_df, top_n=12, figsize=(12,6)):
+
+def plot_counts_per_location_type(pivot_df, top_n=12, figsize=(12, 6)):
     """
     Gantikan stacked bar dengan heatmap: baris = lokasi (top_n), kolom = jenis kejahatan,
     sel berisi jumlah kejadian. Kembalikan objek matplotlib.figure.
@@ -52,7 +66,9 @@ def plot_counts_per_location_type(pivot_df, top_n=12, figsize=(12,6)):
             color = "white" if val > thresh else "black"
             ax.text(j, i, f"{val}", ha="center", va="center", color=color, fontsize=8)
 
-    ax.set_title(f"Jumlah Kejahatan per Jenis di Top {min(top_n, len(plot_df))} Lokasi (Heatmap)")
+    ax.set_title(
+        f"Jumlah Kejahatan per Jenis di Top {min(top_n, len(plot_df))} Lokasi (Heatmap)"
+    )
     ax.set_xlabel("Jenis Kejahatan")
     ax.set_ylabel("Lokasi (TKP)")
     cbar = fig.colorbar(im, ax=ax)
@@ -68,6 +84,7 @@ def make_info_fig(text, figsize=(8, 3.2)):
     plt.tight_layout()
     return fig
 
+
 def plot_top_counts(series, title, xlabel):
     if series is None:
         return make_info_fig(f"Tidak dapat menemukan kolom untuk {title}.")
@@ -78,6 +95,8 @@ def plot_top_counts(series, title, xlabel):
     fig, ax = plt.subplots(figsize=(10, 5.2))
     vc.plot(kind="bar", ax=ax)
     ax.set_title(title)
-    ax.set_xlabel(xlabel); ax.set_ylabel("Jumlah Kejadian")
-    plt.xticks(rotation=45, ha="right"); plt.tight_layout()
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("Jumlah Kejadian")
+    plt.xticks(rotation=45, ha="right")
+    plt.tight_layout()
     return fig
