@@ -236,7 +236,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
                     )
 
                 with gr.Column(scale=6, elem_id="app"):
-                    with gr.Accordion("🗺️ Peta Lokasi & Prediksi Masa Depan", open=True):
+                    with gr.Accordion("🗺️ Peta Lokasi & Prediksi Masa Depan", open=False):
                         with gr.Row(variant="compact"):
                             with gr.Column(scale=2):
                                 gr.Markdown("## Peta Lokasi Kejahatan")

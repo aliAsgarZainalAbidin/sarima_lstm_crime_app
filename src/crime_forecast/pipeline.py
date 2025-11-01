@@ -383,11 +383,13 @@ def run_pipeline(
     peak_months = month_rank.head(3)
 
     fig_season, ax3 = plt.subplots(figsize=(10.5, 4))
-    order_plot = month_rank.sort_values("avg_value")
-    ax3.bar(order_plot["month_name"], order_plot["avg_value"])
+    order_plot = month_rank.sort_values("month")
+    ax3.plot(order_plot["month_name"], order_plot["avg_value"], marker="o", linestyle="-")
     ax3.set_title("Average Cases per Month (Seasonal)")
     ax3.set_xlabel("Month")
     ax3.set_ylabel("Average Cases")
+    ax3.set_ylim(bottom=0)
+    ax3.grid(True, linestyle="--", alpha=0.6)
     plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
 

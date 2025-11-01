@@ -118,10 +118,10 @@ def _process_pipeline_outputs(results):
         )
 
     # Siapkan file unduhan dari byte CSV
-    tsname = int(time.time())
-    fname = f"prediksi_hybrid_{tsname}.csv"
-    with open(fname, "wb") as f:
-        f.write(csv_bytes)
+    # tsname = int(time.time())
+    # fname = f"prediksi_hybrid_{tsname}.csv"
+    # with open(fname, "wb") as f:
+    #     f.write(csv_bytes)
 
     return (
         fig_main,
@@ -336,7 +336,7 @@ def load_data_from_db():
             )
         query = f"SELECT {', '.join(target_columns)} FROM kejadian"
 
-        return pd.read_sql_query(query, conn)
+        return pd.read_sql_query(query, conn).values
     except Exception as e:
         return pd.DataFrame({"Error": [f"Gagal memuat data: {e}"]})
     finally:
