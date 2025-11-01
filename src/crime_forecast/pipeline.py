@@ -385,10 +385,14 @@ def run_pipeline(
     fig_season, ax3 = plt.subplots(figsize=(10.5, 4))
     order_plot = month_rank.sort_values("month")
     ax3.plot(order_plot["month_name"], order_plot["avg_value"], marker="o", linestyle="-")
+
+    max_value = order_plot["avg_value"].max()
+    new_top_limit = max_value * 1.1
     ax3.set_title("Average Cases per Month (Seasonal)")
     ax3.set_xlabel("Month")
     ax3.set_ylabel("Average Cases")
-    ax3.set_ylim(bottom=0)
+    ax3.set_ylim(bottom=0, top=new_top_limit)
+
     ax3.grid(True, linestyle="--", alpha=0.6)
     plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
