@@ -334,7 +334,7 @@ def load_data_from_db():
                     "jumlah_kejadian",
                 ]
             )
-        query = f"SELECT {', '.join(target_columns)} FROM kejadian"
+        query = f"SELECT {', '.join(target_columns)} FROM kejadian ORDER BY waktu_kejadian DESC"
 
         return pd.read_sql_query(query, conn).values
     except Exception as e:
