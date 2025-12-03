@@ -258,9 +258,6 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
                         )
                         plot_main = gr.Plot(label="Grafik Prediksi: Train/Test, SARIMA vs Hybrid")
                         plot_season = gr.Plot(label="Rata-rata Kasus per Bulan")
-                        plot_calendar = gr.Plot(label="Peta Panas Bulanan (Year × Month)")
-                        plot_eda = gr.Plot(label="Boxplot & Histogram (setelah outlier handling)")
-                        plot_acf_pacf = gr.Plot(label="ACF & PACF")
 
                     with gr.Accordion("📈 Analisis TKP & Jenis", open=False):
                         plot_top_tkp = gr.Plot(label="Top 10 Lokasi (TKP) Terbanyak")
@@ -319,10 +316,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
             outputs=[
                 # Tab 3
                 plot_main,
-                plot_eda,
-                plot_acf_pacf,
                 plot_season,
-                plot_calendar,
                 table_metrics,
                 table_comp,
                 # Tab 4
@@ -377,10 +371,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
             outputs=[
                 # Tab 3
                 plot_main,
-                plot_eda,
-                plot_acf_pacf,
                 plot_season,
-                plot_calendar,
                 table_metrics,
                 table_comp,
                 # Tab 4
@@ -428,10 +419,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
             outputs=[
                 # Tab 3
                 plot_main,
-                plot_eda,
-                plot_acf_pacf,
                 plot_season,
-                plot_calendar,
                 table_metrics,
                 table_comp,
                 # Tab 4
@@ -483,10 +471,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
         outputs=[
             # Tab 3
             plot_main,
-            plot_eda,
-            plot_acf_pacf,
             plot_season,
-            plot_calendar,
             table_metrics,
             table_comp,
             # Tab 4

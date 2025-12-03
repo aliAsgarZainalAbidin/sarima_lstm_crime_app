@@ -126,10 +126,7 @@ def _process_pipeline_outputs(results):
 
     return (
         fig_main,
-        fig_eda,
-        fig_acf,
         fig_season,
-        fig_calendar,
         metrics,
         comp_df,
         fig_top_tkp,
