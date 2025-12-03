@@ -1,6 +1,7 @@
 import pandas as pd
 import time
 import sqlite3
+from pandas.tseries.offsets import DateOffset
 from datetime import datetime
 import gradio as gr
 
@@ -138,6 +139,44 @@ def _process_pipeline_outputs(results):
         map_html,
         future_pred_df,
     )
+
+
+def update_prediction_range_text(df_data, horizon):
+    """
+    Memperbarui teks rentang prediksi berdasarkan tanggal terakhir dalam data dan horizon.
+    """
+    if df_data is None or (isinstance(df_data, list) and not df_data):
+        return "Rentang prediksi akan ditampilkan di sini setelah data dimuat."
+
+    try:
+        # Input bisa berupa pd.DataFrame atau list dari komponen gr.Dataframe
+        if isinstance(df_data, pd.DataFrame):
+            df = df_data
+        else: # Jika list of lists dari UI
+            df = pd.DataFrame(
+                df_data,
+                columns=["Waktu Kejadian", "Jenis Kejadian", "TKP", "Jumlah Kejadian"],
+            )
+            df.rename(columns={"Waktu Kejadian": "waktu_kejadian"}, inplace=True)
+
+        if df.empty:
+            return "Rentang prediksi akan ditampilkan di sini setelah data dimuat."
+
+        dates = pd.to_datetime(df.iloc[:, 0], errors="coerce")
+        dates = dates.dropna()
+        if dates.empty:
+            return "Tidak ada data tanggal yang valid untuk menentukan rentang prediksi."
+
+        last_date = dates.max()
+
+        # Prediksi dimulai dari bulan berikutnya
+        start_pred_date = (last_date.to_period("M") + 1).to_timestamp()
+        # Prediksi berakhir 'horizon' bulan kemudian (inklusif)
+        end_pred_date = start_pred_date + DateOffset(months=int(horizon) - 1)
+
+        return f"Prediksi akan mencakup rentang dari **{start_pred_date.strftime('%B %Y')}** hingga **{end_pred_date.strftime('%B %Y')}**."
+    except Exception:
+        return "Gagal menghitung rentang prediksi. Periksa format data tanggal."
 
 
 def run_analysis_pipeline(
@@ -336,7 +375,7 @@ def load_data_from_db():
             )
         query = f"SELECT {', '.join(target_columns)} FROM kejadian ORDER BY waktu_kejadian DESC"
 
-        return pd.read_sql_query(query, conn).values
+        return pd.read_sql_query(query, conn)
     except Exception as e:
         return pd.DataFrame({"Error": [f"Gagal memuat data: {e}"]})
     finally:

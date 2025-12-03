@@ -30,7 +30,7 @@ def fit_lstm_and_predict(
     window=6,
     hidden=124,
     lr=0.001,
-    batch_size=32,
+    batch_size=8,
     epochs=200,
     patience=13,
 ):

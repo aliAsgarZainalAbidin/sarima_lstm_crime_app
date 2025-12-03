@@ -426,10 +426,10 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=CUSTOM_CSS) as demo:
             D_state = gr.State(value=0)
             Q_state = gr.State(value=4)
             s_state = gr.State(value=4)
-            grid_win_state = gr.State(value="3")
+            grid_win_state = gr.State(value="6")
             grid_hid_state = gr.State(value="124")
-            lr_state = gr.State(value=0.0001)
-            batch_size_state = gr.State(value=32)
+            lr_state = gr.State(value=0.001)
+            batch_size_state = gr.State(value=8)
             epochs_state = gr.State(value=200)
             patience_state = gr.State(value=13)
 

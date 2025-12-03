@@ -177,7 +177,7 @@ def run_pipeline(
     # print(train_t)
 
     # 5) SARIMA (optional auto_arima)
-    order, seasonal_order = (1, 2, 2), (1, 0, 3, 7)
+    order, seasonal_order = (2, 0, 3), (1, 0, 4, 4)
     if use_auto_arima:
         try:
             from pmdarima import auto_arima

@@ -7,6 +7,7 @@ from .gradio_callbacks import (
     save_new_event,
     import_data_to_db,
     load_data_from_db,
+    update_prediction_range_text,
 )
 
 
@@ -108,8 +109,6 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
                         label="Jenis Kejahatan",
                         choices=[
                             "cabul",
-                            "cacul",
-                            "cunmor",
                             "curanmor",
                             "curas",
                             "curat",
@@ -118,7 +117,6 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
                             "penganiayaan",
                             "pengeroyokan",
                             "penggelapan",
-                            "penghinaan",
                             "penipuan",
                         ],
                     )
@@ -194,7 +192,10 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
                 with gr.Column(scale=1, elem_id="controls", min_width=400):
                     test_len = gr.State(value=15)
                     horizon = gr.Number(
-                        label="Jumlah Bulan Prediksi (bulan)", value=6, step=1, minimum=1
+                        label="Jumlah Bulan Prediksi (bulan)", value=12, step=1, minimum=1
+                    )
+                    prediction_range_display = gr.Markdown(
+                        "Rentang prediksi akan ditampilkan di sini setelah data dimuat."
                     )
 
                     use_auto = gr.State(value=True)
@@ -250,24 +251,29 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
                                     interactive=False,
                                     show_label=False,
                                 )
-                    
+                    with gr.Accordion("📊 Hasil ", open=False):
+                        table_metrics = gr.Dataframe(label="Metrik Evaluasi", interactive=False)
+                        table_comp = gr.Dataframe(
+                            label="Perbandingan Prediksi (Test)", interactive=False
+                        )
+                        plot_main = gr.Plot(label="Grafik Prediksi: Train/Test, SARIMA vs Hybrid")
+                        plot_season = gr.Plot(label="Rata-rata Kasus per Bulan")
+                        plot_calendar = gr.Plot(label="Peta Panas Bulanan (Year × Month)")
+                        plot_eda = gr.Plot(label="Boxplot & Histogram (setelah outlier handling)")
+                        plot_acf_pacf = gr.Plot(label="ACF & PACF")
+
                     with gr.Accordion("📈 Analisis TKP & Jenis", open=False):
                         plot_top_tkp = gr.Plot(label="Top 10 Lokasi (TKP) Terbanyak")
                         plot_top_jenis = gr.Plot(label="Top 10 Jenis Kejahatan Terbanyak")
                         plot_perjenis = gr.Plot(label="Jumlah Kejahatan per Bulan (per Jenis)")
                         plot_total_bln = gr.Plot(label="Jumlah Kejahatan per Bulan (Total)")
 
-                    with gr.Accordion("📊 Hasil & Unduhan", open=False):
-                        plot_main = gr.Plot(label="Grafik Prediksi: Train/Test, SARIMA vs Hybrid")
-                        plot_eda = gr.Plot(label="Boxplot & Histogram (setelah outlier handling)")
-                        plot_acf_pacf = gr.Plot(label="ACF & PACF")
-                        plot_season = gr.Plot(label="Rata-rata Kasus per Bulan")
-                        plot_calendar = gr.Plot(label="Peta Panas Bulanan (Year × Month)")
-                        table_metrics = gr.Dataframe(label="Metrik Evaluasi", interactive=False)
-                        table_comp = gr.Dataframe(
-                            label="Perbandingan Prediksi (Test)", interactive=False
-                        )
 
+        horizon.change(
+            fn=update_prediction_range_text,
+            inputs=[db_table_output, horizon],
+            outputs=[prediction_range_display],
+        )
 
         save_button.click(
             fn=save_new_event,
@@ -276,6 +282,10 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
             fn=load_data_from_db,
             inputs=None,
             outputs=[db_table_output],
+        ).then(
+            fn=update_prediction_range_text,
+            inputs=[db_table_output, horizon],
+            outputs=[prediction_range_display],
         ).then(
             fn=run_analysis_pipeline,
             inputs=[
@@ -330,7 +340,11 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
         import_file_input.upload(
             fn=import_data_to_db,
             inputs=[import_file_input],
-        ).then(fn=load_data_from_db, inputs=None, outputs=[db_table_output]).then(
+        ).then(
+            fn=load_data_from_db, inputs=None, outputs=[db_table_output]
+        ).then(
+            fn=update_prediction_range_text, inputs=[db_table_output, horizon], outputs=[prediction_range_display]
+        ).then(
             fn=run_analysis_pipeline,
             inputs=[
                 db_table_output,
@@ -432,7 +446,11 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
             show_progress=True,
         )
 
-    demo.load(load_data_from_db, inputs=None, outputs=[db_table_output]).then(
+    demo.load(
+        load_data_from_db, inputs=None, outputs=[db_table_output]
+    ).then(
+        fn=update_prediction_range_text, inputs=[db_table_output, horizon], outputs=[prediction_range_display]
+    ).then(
         fn=run_analysis_pipeline,
         inputs=[
             db_table_output,
