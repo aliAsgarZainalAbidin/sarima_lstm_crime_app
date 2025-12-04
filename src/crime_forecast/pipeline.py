@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.tsa.stattools import adfuller
 
-from crime_forecast.utils.maps import make_map_html, read_coords_file
+from crime_forecast.utils.maps import make_map_html, make_map_html_proportion, read_coords_file
 from crime_forecast.utils.plotting import (
     counts_per_location_type,
     plot_counts_per_location_type,
@@ -140,6 +140,7 @@ def run_pipeline(
     lstm_epochs: int,
     lstm_patience: int,
     horizon: int,
+    end_date: str = None,
 ):
     # 0) Event columns (for TKP/Type analysis)
     waktu_c, tkp_c, jenis_c, jumlah_c = infer_event_columns(
@@ -507,13 +508,35 @@ def run_pipeline(
     coords_df = read_coords_file(coords_file) if coords_file is not None else None
     geojson_path = geojson_file if geojson_file is not None else None
     # pass jenis/jumlah column names so map popups include per-type counts
-    map_html = make_map_html(
+
+    sarima_all_fit_t = fit_sarima(
+        ts_all_t, order=order, seasonal_order=seasonal_order
+    )
+    # Combine and create dataframe
+    sarima_future_t = sarima_forecast(sarima_all_fit_t, steps=horizon).values
+
+    hybrid_future_t = sarima_future_t + pred_res_future_t
+    future_pred = np.expm1(hybrid_future_t).clip(min=0)
+
+    # 4) Buat tanggal horizon
+    last_actual_date = ts.index.max()
+    start_date = (last_actual_date + pd.DateOffset(months=1)).replace(day=1)
+
+    future_dates = pd.date_range(
+        start=start_date,
+        periods=horizon,
+        freq="MS"            # Month Start
+    )
+    map_html = make_map_html_proportion(
         df_raw,
-        tkp_c,
-        coords_df=coords_df,
-        geojson_path=geojson_path,
-        jenis_col=jenis_c,
+        future_dates,
+        future_pred,
+        tkp_col=tkp_c,
         jumlah_col=jumlah_c,
+        coords_df=coords_df,
+        coords_file=coords_file,
+        geojson_path=geojson_path,
+        target_bulan_str=end_date
     )
 
     # 13b) Hitung jumlah per lokasi × jenis untuk peta/tab peta

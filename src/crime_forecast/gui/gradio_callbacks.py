@@ -49,6 +49,7 @@ def _prepare_pipeline_inputs(
     epochs,
     patience,
     horizon,
+    end_date
 ):
     """Mengumpulkan dan membersihkan semua input dari UI untuk pipeline."""
     df_raw = _collect_df_from_db(db_data)
@@ -82,6 +83,7 @@ def _prepare_pipeline_inputs(
         "lstm_epochs": int(epochs),
         "lstm_patience": int(patience),
         "horizon": int(horizon),
+        "end_date": end_date,
     }
     return pipeline_args
 
@@ -171,7 +173,10 @@ def update_prediction_range_text(df_data, horizon):
         # Prediksi berakhir 'horizon' bulan kemudian (inklusif)
         end_pred_date = start_pred_date + DateOffset(months=int(horizon) - 1)
 
-        return f"Prediksi akan mencakup rentang dari **{start_pred_date.strftime('%B %Y')}** hingga **{end_pred_date.strftime('%B %Y')}**."
+        return (
+            f"Prediksi akan mencakup rentang dari **{start_pred_date.strftime('%B %Y')}** hingga **{end_pred_date.strftime('%B %Y')}**.", 
+            end_pred_date.strftime('%B %Y')
+        )
     except Exception:
         return "Gagal menghitung rentang prediksi. Periksa format data tanggal."
 
@@ -203,6 +208,7 @@ def run_analysis_pipeline(
     epochs,
     patience,
     horizon,
+    end_date,
 ):
     """Fungsi utama yang dipanggil oleh Gradio untuk menjalankan seluruh alur kerja."""
 
@@ -234,6 +240,7 @@ def run_analysis_pipeline(
         epochs,
         patience,
         horizon,
+        end_date
     )
 
     # 2. Jalankan pipeline utama

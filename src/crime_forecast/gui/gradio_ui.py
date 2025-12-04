@@ -197,6 +197,9 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
                     prediction_range_display = gr.Markdown(
                         "Rentang prediksi akan ditampilkan di sini setelah data dimuat."
                     )
+                    end_date = gr.State(
+                        value="June 2025",
+                    )
 
                     use_auto = gr.State(value=True)
                     p = gr.State(
@@ -269,7 +272,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
         horizon.change(
             fn=update_prediction_range_text,
             inputs=[db_table_output, horizon],
-            outputs=[prediction_range_display],
+            outputs=[prediction_range_display, end_date],
         )
 
         save_button.click(
@@ -282,7 +285,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
         ).then(
             fn=update_prediction_range_text,
             inputs=[db_table_output, horizon],
-            outputs=[prediction_range_display],
+            outputs=[prediction_range_display,end_date],
         ).then(
             fn=run_analysis_pipeline,
             inputs=[
@@ -312,6 +315,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
                 epochs,
                 patience,
                 horizon,
+                end_date
             ],
             outputs=[
                 # Tab 3
@@ -337,7 +341,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
         ).then(
             fn=load_data_from_db, inputs=None, outputs=[db_table_output]
         ).then(
-            fn=update_prediction_range_text, inputs=[db_table_output, horizon], outputs=[prediction_range_display]
+            fn=update_prediction_range_text, inputs=[db_table_output, horizon], outputs=[prediction_range_display,end_date]
         ).then(
             fn=run_analysis_pipeline,
             inputs=[
@@ -367,6 +371,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
                 epochs,
                 patience,
                 horizon,
+                end_date
             ],
             outputs=[
                 # Tab 3
@@ -415,6 +420,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
                 epochs,
                 patience,
                 horizon,
+                end_date
             ],
             outputs=[
                 # Tab 3
@@ -437,7 +443,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
     demo.load(
         load_data_from_db, inputs=None, outputs=[db_table_output]
     ).then(
-        fn=update_prediction_range_text, inputs=[db_table_output, horizon], outputs=[prediction_range_display]
+        fn=update_prediction_range_text, inputs=[db_table_output, horizon], outputs=[prediction_range_display,end_date]
     ).then(
         fn=run_analysis_pipeline,
         inputs=[
@@ -467,6 +473,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
             epochs,
             patience,
             horizon,
+            end_date
         ],
         outputs=[
             # Tab 3
