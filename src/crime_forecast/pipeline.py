@@ -683,7 +683,6 @@ def run_pipeline(
         fig_top_tkp,
         fig_top_jenis,
         fig_perjenis,
-        fig_total_bln,
         # tabel/unduh & kpi
         metrics_tbl_for_ui,
         hist_df,

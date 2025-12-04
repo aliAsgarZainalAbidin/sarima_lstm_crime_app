@@ -266,7 +266,6 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
                         plot_top_tkp = gr.Plot(label="Top 10 Lokasi (TKP) Terbanyak")
                         plot_top_jenis = gr.Plot(label="Top 10 Jenis Kejahatan Terbanyak")
                         plot_perjenis = gr.Plot(label="Jumlah Kejahatan per Bulan (per Jenis)")
-                        plot_total_bln = gr.Plot(label="Jumlah Kejahatan per Bulan (Total)")
 
 
         horizon.change(
@@ -327,7 +326,6 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
                 plot_top_tkp,
                 plot_top_jenis,
                 plot_perjenis,
-                plot_total_bln,  # 4
                 # Tab 5 (Peta)
                 map_html_comp,
                 pred_range_output,  # Hasil future_pred_df langsung ke tabel ini
@@ -383,7 +381,6 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
                 plot_top_tkp,
                 plot_top_jenis,
                 plot_perjenis,
-                plot_total_bln,  # 4
                 # Tab 5 (Peta)
                 map_html_comp,
                 pred_range_output,  # Hasil future_pred_df langsung ke tabel ini
@@ -432,7 +429,6 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
                 plot_top_tkp,
                 plot_top_jenis,
                 plot_perjenis,
-                plot_total_bln,  # 4
                 # Tab 5 (Peta)
                 map_html_comp,
                 pred_range_output,  # Hasil future_pred_df langsung ke tabel ini
@@ -485,7 +481,6 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
             plot_top_tkp,
             plot_top_jenis,
             plot_perjenis,
-            plot_total_bln,  # 4
             # Tab 5 (Peta)
             map_html_comp,
             pred_range_output,  # Hasil future_pred_df langsung ke tabel ini

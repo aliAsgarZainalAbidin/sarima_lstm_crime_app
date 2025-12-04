@@ -286,7 +286,6 @@ def make_map_html_proportion(
     df_map["prediksi_kasus"] = df_map["prediksi_kasus"].fillna(0.0)
     df_map["proporsi"] = df_map["proporsi"].fillna(0.0)
 
-    print(df_map.head())
 
     # -------------------------------------------------
     # 4) BUAT PETA FOLIUM (SEMUA KECAMATAN, 1 BULAN HORIZON)

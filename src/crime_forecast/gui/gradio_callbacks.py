@@ -101,7 +101,6 @@ def _process_pipeline_outputs(results):
             fig_top_tkp,
             fig_top_jenis,
             fig_perjenis,
-            fig_total_bln,
             metrics,
             hist_df,
             comp_df,
@@ -134,7 +133,6 @@ def _process_pipeline_outputs(results):
         fig_top_tkp,
         fig_top_jenis,
         fig_perjenis,
-        fig_total_bln,
         map_html,
         future_pred_df,
     )
