@@ -138,41 +138,65 @@ def _process_pipeline_outputs(results):
     )
 
 
-def update_prediction_range_text(df_data, horizon):
+def update_horizon_choices(df_data):
     """
-    Memperbarui teks rentang prediksi berdasarkan tanggal terakhir dalam data dan horizon.
+    Memperbarui pilihan dropdown horizon berdasarkan tanggal terakhir dalam data.
+    Menghasilkan pilihan berupa (Label: "Bulan Tahun", Value: jumlah bulan).
     """
-    if df_data is None or (isinstance(df_data, list) and not df_data):
-        return "Rentang prediksi akan ditampilkan di sini setelah data dimuat."
-
     try:
-        # Input bisa berupa pd.DataFrame atau list dari komponen gr.Dataframe
-        if isinstance(df_data, pd.DataFrame):
-            df = df_data
-        else: # Jika list of lists dari UI
-            df = pd.DataFrame(
-                df_data,
-                columns=["Waktu Kejadian", "Jenis Kejadian", "TKP", "Jumlah Kejadian"],
-            )
-            df.rename(columns={"Waktu Kejadian": "waktu_kejadian"}, inplace=True)
-
+        df = _collect_df_from_db(df_data)
         if df.empty:
-            return "Rentang prediksi akan ditampilkan di sini setelah data dimuat."
+            return gr.Dropdown(choices=["Mohon muat data terlebih dahulu"], value=None, interactive=False)
 
-        dates = pd.to_datetime(df.iloc[:, 0], errors="coerce")
-        dates = dates.dropna()
+        dates = pd.to_datetime(df.iloc[:, 0], errors="coerce").dropna()
         if dates.empty:
-            return "Tidak ada data tanggal yang valid untuk menentukan rentang prediksi."
+            return gr.Dropdown(choices=["Data tanggal tidak valid"], value=None, interactive=False)
 
         last_date = dates.max()
-
-        # Prediksi dimulai dari bulan berikutnya
         start_pred_date = (last_date.to_period("M") + 1).to_timestamp()
-        # Prediksi berakhir 'horizon' bulan kemudian (inklusif)
+
+        # Buat pilihan untuk 36 bulan ke depan
+        choices = []
+        for i in range(1, 37):
+            target_date = start_pred_date + DateOffset(months=i - 1)
+            # Format label ke Bahasa Indonesia
+            month_name = target_date.strftime('%B')
+            year = target_date.year
+            label = f"{month_name} {year}"
+            choices.append((label, i))
+
+        # Set nilai default ke 12 bulan jika memungkinkan, jika tidak, ke bulan pertama
+        default_value = 12 if len(choices) >= 12 else (choices[0][1] if choices else None)
+
+        return gr.Dropdown(choices=choices, value=default_value, interactive=True)
+
+    except Exception:
+        return gr.Dropdown(choices=["Gagal memproses tanggal"], value=None, interactive=False)
+
+
+def update_prediction_range_text(horizon, df_data):
+    """
+    Memperbarui teks rentang prediksi berdasarkan tanggal terakhir dalam data dan horizon yang dipilih.
+    """
+    if not horizon:
+        return "Pilih bulan akhir prediksi.", ""
+
+    try:
+        df = _collect_df_from_db(df_data)
+        if df.empty:
+            return "Data belum dimuat.", ""
+
+        dates = pd.to_datetime(df.iloc[:, 0], errors="coerce").dropna()
+        if dates.empty:
+            return "Data tanggal tidak valid.", ""
+
+        last_date = dates.max()
+        start_pred_date = (last_date.to_period("M") + 1).to_timestamp()
         end_pred_date = start_pred_date + DateOffset(months=int(horizon) - 1)
+        start_month_name = start_pred_date.strftime('%B %Y')
 
         return (
-            f"Prediksi akan mencakup rentang dari **{start_pred_date.strftime('%B %Y')}** hingga **{end_pred_date.strftime('%B %Y')}**.", 
+            f"Prediksi akan mencakup rentang dari **{start_month_name}** hingga **{end_pred_date.strftime('%B %Y')}**.",
             end_pred_date.strftime('%B %Y')
         )
     except Exception:
@@ -210,6 +234,12 @@ def run_analysis_pipeline(
 ):
     """Fungsi utama yang dipanggil oleh Gradio untuk menjalankan seluruh alur kerja."""
 
+    # Jika horizon tidak dipilih, gunakan default 12 bulan.
+    # Ini mencegah error jika dropdown tidak memiliki nilai.
+    if horizon is None:
+        gr.Warning("Bulan akhir prediksi tidak dipilih. Menggunakan default 12 bulan.")
+        horizon = 12
+ 
     # 1. Kumpulkan dan siapkan semua input
     pipeline_args = _prepare_pipeline_inputs(
         db_data,
@@ -300,6 +330,7 @@ def save_new_event(waktu, jenis, tkp, checkTabel=False):
     finally:
         if conn:
             conn.close()
+
 
 
 def import_data_to_db(file):

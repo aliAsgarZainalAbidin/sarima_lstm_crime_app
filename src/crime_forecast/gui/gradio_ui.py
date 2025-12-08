@@ -7,6 +7,7 @@ from .gradio_callbacks import (
     save_new_event,
     import_data_to_db,
     load_data_from_db,
+    update_horizon_choices,
     update_prediction_range_text,
 )
 
@@ -190,9 +191,12 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
         with gr.TabItem("Analisis"):
             with gr.Row():
                 with gr.Column(scale=1, elem_id="controls", min_width=400):
-                    test_len = gr.State(value=15)
-                    horizon = gr.Number(
-                        label="Jumlah Bulan Prediksi (bulan)", value=12, step=1, minimum=1
+                    horizon = gr.Dropdown(
+                        label="Prediksi Hingga Bulan",
+                        choices=["Mohon muat data terlebih dahulu"],
+                        value=None,
+                        allow_custom_value=False,
+                        interactive=True,
                     )
                     prediction_range_display = gr.Markdown(
                         "Rentang prediksi akan ditampilkan di sini setelah data dimuat."
@@ -200,6 +204,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
                     end_date = gr.State(
                         value="June 2025",
                     )
+                    test_len = gr.State(value=15)
 
                     use_auto = gr.State(value=True)
                     p = gr.State(
@@ -270,7 +275,7 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
 
         horizon.change(
             fn=update_prediction_range_text,
-            inputs=[db_table_output, horizon],
+            inputs=[horizon, db_table_output],
             outputs=[prediction_range_display, end_date],
         )
 
@@ -282,9 +287,13 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
             inputs=None,
             outputs=[db_table_output],
         ).then(
+            fn=update_horizon_choices,
+            inputs=[db_table_output],
+            outputs=[horizon],
+        ).then(
             fn=update_prediction_range_text,
-            inputs=[db_table_output, horizon],
-            outputs=[prediction_range_display,end_date],
+            inputs=[horizon, db_table_output],
+            outputs=[prediction_range_display, end_date],
         ).then(
             fn=run_analysis_pipeline,
             inputs=[
@@ -339,9 +348,13 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
         ).then(
             fn=load_data_from_db, inputs=None, outputs=[db_table_output]
         ).then(
-            fn=update_prediction_range_text, inputs=[db_table_output, horizon], outputs=[prediction_range_display,end_date]
+            fn=update_horizon_choices,
+            inputs=[db_table_output],
+            outputs=[horizon],
         ).then(
-            fn=run_analysis_pipeline,
+            fn=update_prediction_range_text, inputs=[horizon], outputs=[prediction_range_display,end_date]
+        ).then( # This was a typo in the previous diff, it should be update_prediction_range_text(inputs=[horizon, db_table_output]...)
+             fn=run_analysis_pipeline,
             inputs=[
                 db_table_output,
                 date_col,
@@ -439,9 +452,13 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
     demo.load(
         load_data_from_db, inputs=None, outputs=[db_table_output]
     ).then(
-        fn=update_prediction_range_text, inputs=[db_table_output, horizon], outputs=[prediction_range_display,end_date]
+        fn=update_horizon_choices,
+        inputs=[db_table_output],
+        outputs=[horizon],
     ).then(
-        fn=run_analysis_pipeline,
+        fn=update_prediction_range_text, inputs=[horizon, db_table_output], outputs=[prediction_range_display,end_date]
+    ).then(
+         fn=run_analysis_pipeline,
         inputs=[
             db_table_output,
             date_col,
