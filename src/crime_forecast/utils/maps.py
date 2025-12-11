@@ -265,8 +265,6 @@ def make_map_html_proportion(
     df_pred_kec = prop_df.copy()
     df_pred_kec["prediksi_kasus"] = df_pred_kec["proporsi"] * pred_total
 
-    print("\nprediksi per kecamatan (bulan:", target_bulan_str, ")")
-
     df_loc = pd.read_csv(coords_file).copy()
 
     df_loc.columns = df_loc.columns.str.strip().str.lower()
@@ -290,12 +288,9 @@ def make_map_html_proportion(
     # -------------------------------------------------
     # 4) BUAT PETA FOLIUM (SEMUA KECAMATAN, 1 BULAN HORIZON)
     # -------------------------------------------------
-
-    print(coords_df)
     mdf = counts.merge(
             coords_df[["tkp_norm", "lat", "lon"]], on="tkp_norm", how="inner"
         )
-    print(mdf)
     if mdf.empty:
         return "<div style='padding:12px'>Koordinat tidak cocok dengan nama TKP. Cek ejaan di file koordinat.</div>"
 
