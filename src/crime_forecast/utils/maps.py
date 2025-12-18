@@ -306,8 +306,8 @@ def make_map_html_proportion(
         popup_html = (
             f"<b>{row['lokasi'].upper()}</b><br>"
             f"Bulan: {target_bulan_str}<br>"
-            f"Prediksi Kasus: {row['prediksi_kasus']:.1f}<br>"
-            f"Persentase Kejahatan Per Wilayah: {row['proporsi']*100:.1f}%"
+            f"Prediksi Kasus: {row['prediksi_kasus']:.0f}<br>"
+            f"Persentase Kejahatan Per Wilayah: {row['proporsi']*100:.0f}%"
         )   
 
         popup_obj = folium.Popup(popup_html, max_width=300)
@@ -315,7 +315,7 @@ def make_map_html_proportion(
         folium.Marker(
             location=[row["lat"], row["lon"]],
             popup=popup_obj,
-            tooltip=f"{row['lokasi'].title()} ({row['prediksi_kasus']:.1f} kasus)"
+            tooltip=f"{row['lokasi'].title()} ({row['prediksi_kasus']:.0f} kasus)"
         ).add_to(cluster)
 
     heat_data = mdf[["lat", "lon", "count"]].values.tolist()
