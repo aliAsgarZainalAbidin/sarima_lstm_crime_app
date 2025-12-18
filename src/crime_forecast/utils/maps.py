@@ -305,14 +305,16 @@ def make_map_html_proportion(
 
         popup_html = (
             f"<b>{row['lokasi'].upper()}</b><br>"
-            f"Bulan (HORIZON): {target_bulan_str}<br>"
+            f"Bulan: {target_bulan_str}<br>"
             f"Prediksi Kasus: {row['prediksi_kasus']:.1f}<br>"
-            f"Proporsi historis: {row['proporsi']*100:.1f}%"
+            f"Persentase Kejahatan Per Wilayah: {row['proporsi']*100:.1f}%"
         )   
+
+        popup_obj = folium.Popup(popup_html, max_width=300)
 
         folium.Marker(
             location=[row["lat"], row["lon"]],
-            popup=popup_html,
+            popup=popup_obj,
             tooltip=f"{row['lokasi'].title()} ({row['prediksi_kasus']:.1f} kasus)"
         ).add_to(cluster)
 
