@@ -340,41 +340,6 @@ def run_pipeline(
             }
         )
 
-        # Tambahkan data aktual jika file tersedia (data_kejahatan_4bulan2025.xlsx)
-        try:
-            import os
-            actual_file = "data_kejahatan_4bulan2025.xlsx"
-            if os.path.exists(actual_file):
-                df_act = pd.read_excel(actual_file)
-                dc_act, vc_act = infer_columns(df_act)
-                if dc_act and vc_act:
-                    df_act[dc_act] = pd.to_datetime(df_act[dc_act], errors="coerce")
-                    df_act = df_act.dropna(subset=[dc_act])
-                    df_act.set_index(dc_act, inplace=True)
-                    monthly_act = df_act[vc_act].resample("MS").sum()
-
-                    actual_vals = []
-                    for d in future_dates:
-                        if d in monthly_act.index:
-                            actual_vals.append(int(monthly_act.loc[d]))
-                        else:
-                            actual_vals.append(None)
-                    future_pred_df["Aktual"] = actual_vals
-
-                    # Tambahkan kolom persentase error
-                    errors = []
-                    for _, row in future_pred_df.iterrows():
-                        pred = row["Prediksi"]
-                        act = row["Aktual"]
-                        if pd.notna(act) and act > 0:
-                            error = abs((pred - act) / act) * 100
-                            errors.append(f"{error:.2f}%")
-                        else:
-                            errors.append(None)
-                    future_pred_df["Error (%)"] = errors
-        except Exception:
-            pass
-
     # 8) Main plot (prediction)
     fig_main, ax = plt.subplots(figsize=(11.8, 4.6))
     ax.plot(train.index, train["value"], label="Train")
