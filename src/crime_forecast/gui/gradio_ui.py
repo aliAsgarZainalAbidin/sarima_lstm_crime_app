@@ -191,11 +191,10 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
         with gr.TabItem("Analisis"):
             with gr.Row():
                 with gr.Column(scale=1, elem_id="controls", min_width=400):
-                    horizon = gr.Dropdown(
+                    horizon = gr.DateTime(
                         label="Prediksi Hingga Bulan",
-                        choices=["Mohon muat data terlebih dahulu"],
-                        value=None,
-                        allow_custom_value=False,
+                        type="datetime",
+                        include_time=False,
                         interactive=True,
                     )
                     prediction_range_display = gr.Markdown(
@@ -267,11 +266,6 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
                         plot_main = gr.Plot(label="Grafik Prediksi: Train/Test, SARIMA vs Hybrid")
                         plot_season = gr.Plot(label="Rata-rata Kasus per Bulan")
 
-                    with gr.Accordion("📈 Analisis TKP & Jenis", open=False):
-                        plot_top_tkp = gr.Plot(label="Top 10 Lokasi (TKP) Terbanyak")
-                        plot_top_jenis = gr.Plot(label="Top 10 Jenis Kejahatan Terbanyak")
-                        plot_perjenis = gr.Plot(label="Jumlah Kejahatan per Bulan (per Jenis)")
-
 
         horizon.change(
             fn=update_prediction_range_text,
@@ -331,10 +325,6 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
                 plot_season,
                 table_metrics,
                 table_comp,
-                # Tab 4
-                plot_top_tkp,
-                plot_top_jenis,
-                plot_perjenis,
                 # Tab 5 (Peta)
                 map_html_comp,
                 pred_range_output,  # Hasil future_pred_df langsung ke tabel ini
@@ -390,10 +380,6 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
                 plot_season,
                 table_metrics,
                 table_comp,
-                # Tab 4
-                plot_top_tkp,
-                plot_top_jenis,
-                plot_perjenis,
                 # Tab 5 (Peta)
                 map_html_comp,
                 pred_range_output,  # Hasil future_pred_df langsung ke tabel ini
@@ -438,10 +424,6 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
                 plot_season,
                 table_metrics,
                 table_comp,
-                # Tab 4
-                plot_top_tkp,
-                plot_top_jenis,
-                plot_perjenis,
                 # Tab 5 (Peta)
                 map_html_comp,
                 pred_range_output,  # Hasil future_pred_df langsung ke tabel ini
@@ -494,10 +476,6 @@ with gr.Blocks(title=APP_TITLE, theme=theme, css=css) as demo:
             plot_season,
             table_metrics,
             table_comp,
-            # Tab 4
-            plot_top_tkp,
-            plot_top_jenis,
-            plot_perjenis,
             # Tab 5 (Peta)
             map_html_comp,
             pred_range_output,  # Hasil future_pred_df langsung ke tabel ini

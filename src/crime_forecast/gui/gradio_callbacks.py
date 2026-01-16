@@ -130,9 +130,6 @@ def _process_pipeline_outputs(results):
         fig_season,
         metrics,
         comp_df,
-        fig_top_tkp,
-        fig_top_jenis,
-        fig_perjenis,
         map_html,
         future_pred_df,
     )
@@ -146,32 +143,20 @@ def update_horizon_choices(df_data):
     try:
         df = _collect_df_from_db(df_data)
         if df.empty:
-            return gr.Dropdown(choices=["Mohon muat data terlebih dahulu"], value=None, interactive=False)
+            return gr.DateTime(value=None, interactive=False)
 
         dates = pd.to_datetime(df.iloc[:, 0], errors="coerce").dropna()
         if dates.empty:
-            return gr.Dropdown(choices=["Data tanggal tidak valid"], value=None, interactive=False)
+            return gr.DateTime(value=None, interactive=False)
 
         last_date = dates.max()
-        start_pred_date = (last_date.to_period("M") + 1).to_timestamp()
+        # Default 12 bulan ke depan
+        default_date = last_date + DateOffset(months=12)
 
-        # Buat pilihan untuk 36 bulan ke depan
-        choices = []
-        for i in range(1, 37):
-            target_date = start_pred_date + DateOffset(months=i - 1)
-            # Format label ke Bahasa Indonesia
-            month_name = target_date.strftime('%B')
-            year = target_date.year
-            label = f"{month_name} {year}"
-            choices.append((label, i))
-
-        # Set nilai default ke 12 bulan jika memungkinkan, jika tidak, ke bulan pertama
-        default_value = 12 if len(choices) >= 12 else (choices[0][1] if choices else None)
-
-        return gr.Dropdown(choices=choices, value=default_value, interactive=True)
+        return gr.DateTime(value=default_date, interactive=True)
 
     except Exception:
-        return gr.Dropdown(choices=["Gagal memproses tanggal"], value=None, interactive=False)
+        return gr.DateTime(value=None, interactive=False)
 
 
 def update_prediction_range_text(horizon, df_data):
@@ -192,7 +177,7 @@ def update_prediction_range_text(horizon, df_data):
 
         last_date = dates.max()
         start_pred_date = (last_date.to_period("M") + 1).to_timestamp()
-        end_pred_date = start_pred_date + DateOffset(months=int(horizon) - 1)
+        end_pred_date = pd.to_datetime(horizon)
         start_month_name = start_pred_date.strftime('%B %Y')
 
         return (
@@ -234,11 +219,22 @@ def run_analysis_pipeline(
 ):
     """Fungsi utama yang dipanggil oleh Gradio untuk menjalankan seluruh alur kerja."""
 
-    # Jika horizon tidak dipilih, gunakan default 12 bulan.
-    # Ini mencegah error jika dropdown tidak memiliki nilai.
-    if horizon is None:
+    # Hitung integer horizon dari input tanggal
+    horizon_int = 12
+    if horizon is not None:
+        try:
+            df_temp = _collect_df_from_db(db_data)
+            if not df_temp.empty:
+                dates = pd.to_datetime(df_temp.iloc[:, 0], errors="coerce").dropna()
+                if not dates.empty:
+                    last_date = dates.max()
+                    target_date = pd.to_datetime(horizon)
+                    diff = (target_date.year - last_date.year) * 12 + (target_date.month - last_date.month)
+                    horizon_int = max(1, int(diff))
+        except Exception:
+            pass
+    else:
         gr.Warning("Bulan akhir prediksi tidak dipilih. Menggunakan default 12 bulan.")
-        horizon = 12
  
     # 1. Kumpulkan dan siapkan semua input
     pipeline_args = _prepare_pipeline_inputs(
@@ -267,7 +263,7 @@ def run_analysis_pipeline(
         batch_size,
         epochs,
         patience,
-        horizon,
+        horizon_int,
         end_date
     )
 
